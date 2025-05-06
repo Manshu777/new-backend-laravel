@@ -1,0 +1,19 @@
+<?php
+
+namespace App\Filament\Resources\SitelayoutResource\Pages;
+
+use App\Filament\Resources\SitelayoutResource;
+use Filament\Actions;
+use Filament\Resources\Pages\ListRecords;
+
+class ListSitelayouts extends ListRecords
+{
+    protected static string $resource = SitelayoutResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Actions\CreateAction::make(),
+        ];
+    }
+}
