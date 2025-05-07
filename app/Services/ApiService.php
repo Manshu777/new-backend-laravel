@@ -24,7 +24,7 @@ class ApiService
             'ClientId' => $this->clientId,
             'UserName' => $this->username,
             'Password' => $this->password,
-            'EndUserIp' => request()->ip(),
+            'EndUserIp' => '148.135.137.54',
         ]);
 
         if ($response->successful()) {
