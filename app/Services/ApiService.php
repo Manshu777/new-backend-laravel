@@ -15,7 +15,7 @@ class ApiService
     {
         $this->clientId = env('API_CLIENT_ID');
         $this->username = env('API_USERNAME');
-        $this->password = env('API_PASSWORD');
+        $this->password = 'Next@1234';
     }
 
     public function authenticate()
