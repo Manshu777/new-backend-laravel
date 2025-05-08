@@ -23,7 +23,7 @@ use App\Http\Controllers\RazorpayOrderController;
 
 
 
-
+use App\Http\Controllers\ApiController;
 use App\Http\Controllers\ImageController;
 
 use App\Http\Controllers\HotelRegesController;
@@ -43,6 +43,8 @@ use App\Http\Controllers\HolidayspackageController;
 use App\Http\Controllers\CharterController;
 
 use App\Http\Controllers\SitelayoutController;
+
+
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -65,6 +67,8 @@ Route::post('v1/genrate-ticket', [FlightController::class, 'generateTicket']);
 Route::post('v1/get-calendar-fare', [FlightController::class, 'getCalendarFare']);
 
 
+
+Route::get('/get-token', [ApiController::class, 'getToken']);
 
 Route::get('/test-ticket', [TicketBookingController::class, 'testTicketGeneration']);
 

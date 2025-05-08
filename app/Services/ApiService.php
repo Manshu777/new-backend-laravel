@@ -20,28 +20,34 @@ class ApiService
 
     public function authenticate()
     {
-        $response = Http::post('https://api.travelboutiqueonline.com/SharedAPI/SharedData.svc/rest/Authenticate', [
+        $response = Http::post('http://Sharedapi.tektravels.com/SharedData.svc/rest/Authenticate', [
             'ClientId' => $this->clientId,
             'UserName' => $this->username,
             'Password' => $this->password,
             'EndUserIp' => '148.135.137.54',
         ]);
-
+    
         if ($response->successful()) {
             $data = $response->json();
+    
+            if (!isset($data['TokenId'])) {
+                throw new \Exception('TokenId not found in response: ' . json_encode($data));
+            }
+    
             $token = $data['TokenId'];
             $expiresAt = now()->addHours(14);
-
+    
             ApiToken::updateOrCreate(
                 ['id' => 1],
                 ['token' => $token, 'expires_at' => $expiresAt]
             );
-
+    
             return $token;
         }
-
+    
         throw new \Exception('Authentication failed: ' . $response->body());
     }
+    
 
     public function getToken()
     {
