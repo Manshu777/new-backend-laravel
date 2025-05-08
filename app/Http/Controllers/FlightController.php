@@ -66,14 +66,14 @@ class FlightController extends Controller
     
         // Send API Request
         $response = Http::timeout(100)->withHeaders([])->post(
-            'http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Search',
+            'https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/Search',
             $searchPayload
         );
     
         if ($response->json('Response.Error.ErrorCode') === 6) {
             $token = $this->apiService->authenticate();
             $response = Http::timeout(90)->withHeaders([])->post(
-                'http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Search',
+                'https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/Search',
                 $searchPayload
             );
         }
@@ -226,13 +226,13 @@ class FlightController extends Controller
         }
     
         // Make the API request
-        $response = Http::timeout(100)->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Book', $bookingPayload);
+        $response = Http::timeout(100)->post('https://booking.travelboutiqueonline.com/AirAPI_V10/AirService.svc/Book', $bookingPayload);
     
         // Handle token expiration
         if ($response->json('Response.Error.ErrorCode') === 6) {
             $token = $this->apiService->authenticate();
             $bookingPayload['TokenId'] = $token;
-            $response = Http::timeout(90)->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Book', $bookingPayload);
+            $response = Http::timeout(90)->post('https://booking.travelboutiqueonline.com/AirAPI_V10/AirService.svc/Book', $bookingPayload);
         }
     
         // Check if the booking was successful
@@ -411,12 +411,12 @@ class FlightController extends Controller
             }
 
             // Make API request with retry on token expiration
-            $response = Http::timeout(100)->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Book', $bookingPayload);
+            $response = Http::timeout(100)->post('https://booking.travelboutiqueonline.com/AirAPI_V10/AirService.svc/Book', $bookingPayload);
 
             if ($response->json('Response.Error.ErrorCode') === 6) {
                 $token = $this->apiService->authenticate();
                 $bookingPayload['TokenId'] = $token;
-                $response = Http::timeout(90)->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Book', $bookingPayload);
+                $response = Http::timeout(90)->post('https://booking.travelboutiqueonline.com/AirAPI_V10/AirService.svc/Book', $bookingPayload);
             }
 
             if ($response->json('Response.ResponseStatus') === 1) {
@@ -494,7 +494,7 @@ class FlightController extends Controller
             ]);
 
 
-            $apiUrl = "http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/GetCalendarFare";
+            $apiUrl = "https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/GetCalendarFare";
 
 
             $response = Http::post($apiUrl, [
@@ -561,7 +561,7 @@ class FlightController extends Controller
             ], 422);
         }
 
-        $apiUrl = "http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/GetCancellationCharges";
+        $apiUrl = "https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/GetCancellationCharges";
 
         // Get validated request data
         $requestData = $validator->validated();
@@ -682,7 +682,7 @@ class FlightController extends Controller
             }
 
             // Make the API request
-            $response = Http::timeout(100)->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Ticket', $bookingPayload);
+            $response = Http::timeout(100)->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/Ticket', $bookingPayload);
 
             // Handle API errors
             if ($response->failed()) {
@@ -693,7 +693,7 @@ class FlightController extends Controller
             if ($response->json('Response.Error.ErrorCode') === 6) {
                 $token = $this->apiService->authenticate();
                 $bookingPayload['TokenId'] = $token;
-                $response = Http::timeout(90)->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Ticket', $bookingPayload);
+                $response = Http::timeout(90)->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/Ticket', $bookingPayload);
 
                 if ($response->failed()) {
                     throw new \Exception('Retry API request failed after token refresh: ' . $response->body());
@@ -791,7 +791,7 @@ class FlightController extends Controller
 
             // Make the API request
             $response = Http::timeout(100)->post(
-                'http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/GetBookingDetails',
+                'https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/GetBookingDetails',
                 $payload
             );
 
@@ -805,7 +805,7 @@ class FlightController extends Controller
                 $token = $this->apiService->authenticate(); // Refresh token
                 $payload['TokenId'] = $token;
                 $response = Http::timeout(90)->post(
-                    'http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/GetBookingDetails',
+                    'https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/GetBookingDetails',
                     $payload
                 );
 
@@ -884,7 +884,7 @@ class FlightController extends Controller
             'BookingId' => $validatedData['BookingId'],
         ];
     
-        $response = Http::timeout(90)->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Ticket', $payload);
+        $response = Http::timeout(90)->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/Ticket', $payload);
     
         return $response->json();
     }
@@ -917,7 +917,7 @@ class FlightController extends Controller
 
             // Make the API request to TekTravels
             $response = Http::timeout(100)->post(
-                'http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/SendChangeRequest',
+                'https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/SendChangeRequest',
                 $payload
             );
 
@@ -1026,7 +1026,7 @@ class FlightController extends Controller
         ];
 
 
-        $response = Http::timeout(100)->withHeaders([])->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Search', $searchPayload);
+        $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/Search', $searchPayload);
 
 
 
@@ -1035,7 +1035,7 @@ class FlightController extends Controller
             $token = $this->apiService->authenticate();
 
 
-            $response = Http::timeout(90)->withHeaders([])->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Search', $searchPayload);
+            $response = Http::timeout(90)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/Search', $searchPayload);
         }
 
         //  Return the search response
@@ -1107,7 +1107,7 @@ class FlightController extends Controller
         ];
 
 
-        $response = Http::timeout(100)->withHeaders([])->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/PriceRBD', $searchPayload);
+        $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/PriceRBD', $searchPayload);
 
 
 
@@ -1116,7 +1116,7 @@ class FlightController extends Controller
             $token = $this->apiService->authenticate();
 
 
-            $response = Http::timeout(90)->withHeaders([])->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/PriceRBD', $searchPayload);
+            $response = Http::timeout(90)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/PriceRBD', $searchPayload);
         }
 
         //  Return the search response
@@ -1136,13 +1136,13 @@ class FlightController extends Controller
         ]);
         $validatedData["TokenId"] = $token;
 
-        $response = Http::timeout(100)->withHeaders([])->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/FareRule', $validatedData);
+        $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/FareRule', $validatedData);
         if ($response->json('Response.Error.ErrorCode') === 6) {
 
             $token = $this->apiService->authenticate();
 
 
-            $response = Http::timeout(100)->withHeaders([])->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/FareRule', $validatedData);
+            $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/FareRule', $validatedData);
         }
         return $response;
     }
@@ -1197,13 +1197,13 @@ class FlightController extends Controller
         ]);
         $validatedData["TokenId"] = $token;
 
-        $response = Http::timeout(100)->withHeaders([])->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/FareQuote', $validatedData);
+        $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/FareQuote', $validatedData);
         if ($response->json('Response.Error.ErrorCode') === 6) {
 
             $token = $this->apiService->authenticate();
 
 
-            $response = Http::timeout(100)->withHeaders([])->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/FareQuote', $validatedData);
+            $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/FareQuote', $validatedData);
         }
         return $response;
     }
