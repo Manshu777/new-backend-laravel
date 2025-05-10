@@ -124,13 +124,13 @@ Route::post('v1/bus/book', [BusControllerSearch::class, 'bookbus']);
 
 // busBlock
 
-Route::post('/transfer-search', [TransferSearchController::class, 'searchTransfer']);
+Route::post('v1/transfer-search', [TransferSearchController::class, 'searchTransfer']);
 
 
-Route::get('/transfers', [TransferController::class, 'getTransferData']);
+Route::get('v1/transfers', [TransferController::class, 'getTransferData']);
 
-Route::get('v1/cab/countries', [CountryControllerCab::class, 'getCountryList']);
-
+Route::get('v1/cab/countries', [CountryControllerCab::class, '']);
+Route::post('v1/destination-search-static-data', [TransferController::class, 'getDestinationSearchStaticData']);
 
 // Route::prefix('v1')->group(function () {
 //     Route::apiResource('hotelreg', HotelRegistrationController::class);
