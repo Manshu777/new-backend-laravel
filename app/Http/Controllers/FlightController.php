@@ -720,15 +720,13 @@ class FlightController extends Controller
 
             $bookingResponse = $response->json('Response.Response');
 
-            // Store booking details
-            Bookflights::create([
+             FlightBooking::create([
                 'token' => $token,
                 'trace_id' => $validatedData['TraceId'],
                 'user_ip' => $validatedData['EndUserIp'],
-                'user_id' => $validatedData['user_id'],
-
                 'pnr' => $bookingResponse['PNR'],
                 'booking_id' => $bookingResponse['BookingId'],
+     
                 'username' => $validatedData['email'],
                 'user_name' => $validatedData['Passengers'][0]['FirstName'] . ' ' . $validatedData['Passengers'][0]['LastName'],
                 'phone_number' => $validatedData['Passengers'][0]['ContactNo'],
