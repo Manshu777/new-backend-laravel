@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Myports extends Model
 {
     //
-    protected $table="airports";
+    protected $table="airport";
 
     
 }
