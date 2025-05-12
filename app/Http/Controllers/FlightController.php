@@ -66,14 +66,14 @@ class FlightController extends Controller
     
         // Send API Request
         $response = Http::timeout(100)->withHeaders([])->post(
-            'http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Search',
+            'https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/Search',
             $searchPayload
         );
     
         if ($response->json('Response.Error.ErrorCode') === 6) {
             $token = $this->apiService->authenticate();
             $response = Http::timeout(90)->withHeaders([])->post(
-                'http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Search',
+                'https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/Search',
                 $searchPayload
             );
         }
