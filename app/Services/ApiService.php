@@ -13,14 +13,14 @@ class ApiService
 
     public function __construct()
     {
-    $this->clientId = env('API_CLIENT_ID');
+         $this->clientId = env('API_CLIENT_ID');
     $this->username = env('API_USERNAME');
     $this->password = env('API_PASSWORD');
     }
 
     public function authenticate()
     {
-        $response = Http::post('http://Sharedapi.tektravels.com/SharedData.svc/rest/Authenticate', [
+        $response = Http::post('https://api.travelboutiqueonline.com/SharedAPI/SharedData.svc/rest/Authenticate', [
             'ClientId' => $this->clientId,
             'UserName' => $this->username,
             'Password' => $this->password,
