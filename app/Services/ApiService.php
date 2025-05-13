@@ -23,7 +23,7 @@ class ApiService
         $response = Http::post('https://api.travelboutiqueonline.com/SharedAPI/SharedData.svc/rest/Authenticate', [
             'ClientId' => $this->clientId,
             'UserName' => $this->username,
-            'Password' => $this->password,
+            'Password' =>   '#New@api48#',
             'EndUserIp' => '148.135.137.54',
         ]);
     
