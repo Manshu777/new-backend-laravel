@@ -198,8 +198,7 @@ Route::get("/v1/holidays/review",[HolidayspackageController::class,"getallreview
 
 
 
-   Route::post('/v1/insurance/searh', [InsuranceController::class, 'searchInsurance']);
-
+   Route::post('/v1/insurance/search', [InsuranceController::class, 'searchInsurance']);
    Route::post('/v1/insurance/book', [InsuranceController::class, 'bookInsurance']);
    Route::post('/v1/insurance/generate-policy', [InsuranceController::class, 'generatePolicy']);
    Route::post('/v1/insurance/get-booking-detail', [InsuranceController::class, 'getBookingDetail']);
