@@ -60,8 +60,7 @@ return $response ;
     } 
 
 
-
-     public function searchInsurance(Request $request)
+ public function searchInsurance(Request $request)
     {
         try {
             // Validate request parameters
@@ -87,8 +86,18 @@ return $response ;
                 ], 500);
             }
 
-            // Prepare payload with TokenID
-            $payload = array_merge($validated, ['TokenID' => $token]);
+            // Prepare payload, converting dates to ISO 8601
+            $payload = [
+                'TokenID' => $token,
+                'EndUserIp' => $validated['EndUserIp'],
+                'PlanCategory' => $validated['PlanCategory'],
+                'PlanCoverage' => $validated['PlanCoverage'],
+                'PlanType' => $validated['PlanType'],
+                'TravelStartDate' => $validated['TravelStartDate'] . 'T00:00:00',
+                'TravelEndDate' => $validated['TravelEndDate'] . 'T00:00:00',
+                'NoOfPax' => $validated['NoOfPax'],
+                'PaxAge' => $validated['PaxAge'],
+            ];
 
             // Log request payload
             Log::info('Insurance API Request Payload', ['payload' => $payload]);
@@ -159,7 +168,6 @@ return $response ;
             ], 500);
         }
     }
-
 
 
  
