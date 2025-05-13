@@ -20,7 +20,7 @@ class ApiService
 
     public function authenticate()
     {
-        $response = Http::post('http://Sharedapi.tektravels.com/SharedData.svc/rest/Authenticate', [
+        $response = Http::post('https://api.travelboutiqueonline.com/SharedAPI/SharedData.svc/rest/Authenticate', [
             'ClientId' => $this->clientId,
             'UserName' => $this->username,
             'Password' =>   '#New@api48#',

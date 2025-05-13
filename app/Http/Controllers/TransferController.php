@@ -57,108 +57,108 @@ class TransferController extends Controller
         }
     }
 
-    public function getDestinationSearchStaticData(Request $request)
-    {
-        // Validate incoming request
-        $validated = $request->validate([
-            'SearchType' => 'required|in:1,2', // 1 = City, 2 = Hotel
-            'CountryCode' => 'required|string|size:2', // ISO Country Code (e.g., GB)
-            'Limit' => 'nullable|integer|min:1|max:100', // Optional limit, default 100
-        ]);
+  public function getDestinationSearchStaticData(Request $request)
+{
+    // Validate incoming request
+    $validated = $request->validate([
+        'SearchType' => 'required|in:1,2', // 1 = City, 2 = Hotel
+        'CountryCode' => 'required|string|size:2', // ISO Country Code (e.g., GB)
+        'Limit' => 'nullable|integer|min:1|max:100', // Optional limit, default 100
+    ]);
 
-        // Retrieve the API token using the ApiService
-        try {
-            $token = $this->apiService->getToken();
-            if (!$token) {
-                Log::error('Failed to retrieve API token');
-                return response()->json(['error' => 'Unable to retrieve API token'], 500);
-            }
-        } catch (\Exception $e) {
-            Log::error('Error retrieving API token: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to retrieve API token'], 500);
+    // Retrieve the API token using the ApiService
+    try {
+        $token = $this->apiService->getToken();
+        if (!$token) {
+            Log::error('Failed to retrieve API token');
+            return response()->json(['error' => 'Unable to retrieve API token'], 500);
         }
-
-        // Prepare the payload for the API request
-        $requestData = [
-            'ClientId' => 'ApiIntegrationNew',
-            'EndUserIp' => $request->ip(),
-            'TokenId' => $token,
-            'SearchType' => $validated['SearchType'],
-            'CountryCode' => $validated['CountryCode'],
-            'Limit' => $validated['Limit'] ?? 100, // Default to 100 if not provided
-        ];
-
-        try {
-            // Make the API request using the HTTP client
-            $response = Http::post(
-                'http://sharedapi.tektravels.com/staticdata.svc/rest/GetDestinationSearchStaticData',
-                $requestData
-            );
-
-            // Check if the response is successful
-            if ($response->successful()) {
-                $destinationData = json_decode($response->body(), true);
-
-                // Validate JSON decoding
-                if (json_last_error() !== JSON_ERROR_NONE) {
-                    Log::error('JSON decode error: ' . json_last_error_msg());
-                    return response()->json(['error' => 'Invalid API response format'], 500);
-                }
-
-                // Extract the Destinations array
-                $destinations = $destinationData['Destinations'] ?? [];
-
-                if (!empty($destinations)) {
-                    // Prepare data for bulk insertion
-                    $destinationRecords = array_map(function ($destination) {
-                        return [
-                            'city_name' => $destination['CityName'] ?? '',
-                            'country_code' => $destination['CountryCode'] ?? '',
-                            'country_name' => $destination['CountryName'] ?? '',
-                            'destination_id' => $destination['DestinationId'] ?? 0,
-                            'state_province' => $destination['StateProvince'] ?? null,
-                            'type' => $destination['Type'] ?? 0,
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ];
-                    }, $destinations);
-
-                    // Use a transaction for bulk insertion
-                    try {
-                        DB::transaction(function () use ($destinationRecords) {
-                            foreach (array_chunk($destinationRecords, 100) as $chunk) {
-                                Destination::upsert(
-                                    $chunk,
-                                    ['destination_id'],
-                                    ['city_name', 'country_code', 'country_name', 'state_province', 'type', 'updated_at']
-                                );
-                            }
-                        });
-                    } catch (\Exception $e) {
-                        Log::error('Database upsert error: ' . $e->getMessage());
-                        return response()->json(['error' => 'Failed to save destinations to database'], 500);
-                    }
-
-                    // Return the API data along with the message and count
-                    return response()->json([
-                        'message' => 'Destinations saved successfully',
-                        'count' => count($destinations),
-                        'data' => $destinationData['Destinations'], // Include only Destinations array
-                        // Optionally include full API response: 'api_response' => $destinationData
-                    ]);
-                }
-
-                return response()->json([
-                    'message' => 'No destinations found',
-                    'data' => [],
-                ], 200);
-            } else {
-                Log::error('API request failed with status: ' . $response->status());
-                return response()->json(['error' => 'Unable to fetch destination search static data'], $response->status());
-            }
-        } catch (\Exception $e) {
-            Log::error('API request error: ' . $e->getMessage());
-            return response()->json(['error' => 'An error occurred: ' . $e->getMessage()], 500);
-        }
+    } catch (\Exception $e) {
+        report($e);
+        return response()->json(['error' => 'Exception while retrieving API token', 'message' => $e->getMessage()], 500);
     }
+
+    // Prepare the payload for the API request
+    $requestData = [
+        'ClientId' => 'ApiIntegrationNew',
+        'EndUserIp' => $request->ip(),
+        'TokenId' => $token,
+        'SearchType' => $validated['SearchType'],
+        'CountryCode' => $validated['CountryCode'],
+        'Limit' => $validated['Limit'] ?? 100,
+    ];
+
+    try {
+        // Make the API request with timeout and exception handling
+        $response = Http::timeout(15)->post(
+            'http://sharedapi.tektravels.com/staticdata.svc/rest/GetDestinationSearchStaticData',
+            $requestData
+        );
+
+        if (!$response->successful()) {
+            Log::error('API call failed', [
+                'status' => $response->status(),
+                'body' => $response->body()
+            ]);
+            return response()->json(['error' => 'Unable to fetch destination data from external API'], $response->status());
+        }
+
+        $destinationData = json_decode($response->body(), true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            Log::error('Invalid JSON format received: ' . json_last_error_msg());
+            return response()->json(['error' => 'Malformed JSON response from API'], 500);
+        }
+
+        $destinations = $destinationData['Destinations'] ?? [];
+
+        if (!empty($destinations)) {
+            $destinationRecords = array_map(function ($destination) {
+                return [
+                    'city_name' => $destination['CityName'] ?? '',
+                    'country_code' => $destination['CountryCode'] ?? '',
+                    'country_name' => $destination['CountryName'] ?? '',
+                    'destination_id' => $destination['DestinationId'] ?? 0,
+                    'state_province' => $destination['StateProvince'] ?? null,
+                    'type' => $destination['Type'] ?? 0,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }, $destinations);
+
+            try {
+                DB::transaction(function () use ($destinationRecords) {
+                    foreach (array_chunk($destinationRecords, 100) as $chunk) {
+                        Destination::upsert(
+                            $chunk,
+                            ['destination_id'],
+                            ['city_name', 'country_code', 'country_name', 'state_province', 'type', 'updated_at']
+                        );
+                    }
+                });
+            } catch (\Exception $e) {
+                report($e);
+                return response()->json(['error' => 'Failed to store destination data', 'message' => $e->getMessage()], 500);
+            }
+
+            return response()->json([
+                'message' => 'Destinations saved successfully',
+                'count' => count($destinations),
+                'data' => $destinations,
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'No destinations found for the given parameters.',
+            'data' => [],
+        ], 200);
+
+    } catch (\Illuminate\Http\Client\RequestException $e) {
+        report($e);
+        return response()->json(['error' => 'HTTP client error', 'message' => $e->getMessage()], 500);
+    } catch (\Exception $e) {
+        report($e);
+        return response()->json(['error' => 'Unexpected error occurred', 'message' => $e->getMessage()], 500);
+    }
+}
+
 }
