@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Services\ApiService;
 use Illuminate\Support\Facades\Http;
-
+   use Illuminate\Support\Facades\Log;
 
 class InsuranceController extends Controller
 {
@@ -42,13 +42,13 @@ class InsuranceController extends Controller
      $validate["TokenId"]=$token;
    
 
-     $response= Http::timeout(100)->post("https://InsuranceBE.tektravels.com/InsuranceService.svc/rest/Search",$validate);
+     $response= Http::timeout(100)->post("https://api.travelboutiqueonline.com/InsuranceAPI_V1/InsuranceService.svc/rest/Search",$validate);
 
 if($response->json('Response.Error.ErrorCode') === 6){
 
     $token = $this->apiService->authenticate();
     $validate['TokenId'] = $token;
-    $response= Http::timeout(100)->post("https://InsuranceBE.tektravels.com/InsuranceService.svc/rest/Search",$validate);
+    $response= Http::timeout(100)->post("https://api.travelboutiqueonline.com/InsuranceAPI_V1/InsuranceService.svc/rest/Search",$validate);
 }
   
 
@@ -59,6 +59,10 @@ return $response ;
 
     } 
 
+
+
+ 
+  
     public function searchInsurance(Request $request)
 {
     try {
@@ -68,16 +72,16 @@ return $response ;
             'PlanCategory'    => 'required|integer|in:1,2,3,4,5,6',
             'PlanCoverage'    => 'required|integer|in:1,2,3,4,5,6,7,8',
             'PlanType'        => 'required|integer|in:1,2',
-            'TravelStartDate' => 'required',
-            'TravelEndDate'   => 'required',
+            'TravelStartDate' => 'required|date',
+            'TravelEndDate'   => 'required|date',
             'NoOfPax'         => 'required|integer|min:1',
             'PaxAge'          => 'required|array|min:1',
-            'PaxAge.*'        => 'required|integer|min:1|max:100', 
+            'PaxAge.*'        => 'required|integer|min:1|max:100',
+            'TokenId'         => 'required|string', 
         ]);
 
-        // Get API Token
-        $token = $this->apiService->getToken();
-        $validated["TokenId"] = $token;
+        // Log the token
+        Log::info('Token received from request', ['TokenId' => $validated['TokenId']]);
 
         // Define API endpoint
         $apiUrl = "https://InsuranceBE.tektravels.com/InsuranceService.svc/rest/Search";
@@ -85,7 +89,13 @@ return $response ;
         // Send request to TekTravels API
         $response = Http::post($apiUrl, $validated);
 
-        // Check if API response is valid
+        // Log the API response
+        Log::info('API Response', [
+            'status' => $response->status(),
+            'body' => $response->body(),
+        ]);
+
+        // Check if API response failed
         if ($response->failed()) {
             return response()->json([
                 'success' => false,
@@ -100,7 +110,6 @@ return $response ;
         ], 200);
 
     } catch (\Illuminate\Validation\ValidationException $e) {
-        // Handle validation errors
         return response()->json([
             'success' => false,
             'message' => 'Validation failed',
@@ -108,7 +117,7 @@ return $response ;
         ], 422);
 
     } catch (\Illuminate\Http\Client\RequestException $e) {
-        // Handle HTTP client errors
+        Log::error('HTTP Client Error', ['error' => $e->getMessage()]);
         return response()->json([
             'success' => false,
             'message' => 'Failed to communicate with the insurance API',
@@ -116,7 +125,7 @@ return $response ;
         ], 500);
 
     } catch (\Exception $e) {
-        // Catch all other errors
+        Log::error('Unexpected Error', ['error' => $e->getMessage()]);
         return response()->json([
             'success' => false,
             'message' => 'An unexpected error occurred',
@@ -124,6 +133,8 @@ return $response ;
         ], 500);
     }
 }
+
+
 
     
 
