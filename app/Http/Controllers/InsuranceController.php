@@ -64,18 +64,17 @@ return $response ;
     {
         try {
             // Validate request parameters
-            $validated = $request->validate([
-                'EndUserIp'       => 'required|ip',
-                'PlanCategory'    => 'required|integer|in:1,2,3,4,5,6',
-                'PlanCoverage'    => 'required|integer|in:1,2,3,4,5,6,7,8',
-                'PlanType'        => 'required|integer|in:1,2',
-                'TravelStartDate' => 'required|date_format:Y-m-d',
-                'TravelEndDate'   => 'required|date_format:Y-m-d|after_or_equal:TravelStartDate',
-                'NoOfPax'         => 'required|integer|min:1',
-                'PaxAge'          => 'required|array|min:1',
-                'PaxAge.*'        => 'required|integer|min:1|max:100',
-            ]);
-
+         $validated = $request->validate([
+    'EndUserIp'       => 'required|ip',
+    'PlanCategory'    => 'required|integer|in:1,2,3,4,5,6',
+    'PlanCoverage'    => 'required|integer|in:1,2,3,4,5,6,7,8',
+    'PlanType'        => 'required|integer|in:1,2',
+    'TravelStartDate' => 'required|date_format:Y-m-d',
+    'TravelEndDate'   => 'required|date_format:Y-m-d|after_or_equal:TravelStartDate',
+    'NoOfPax'         => 'required|integer|min:1',
+    'PaxAge'          => 'required|array|min:1',
+    'PaxAge.*'        => 'required|integer|min:1|max:100',
+]);
             // Get token from .env
             $token = config('services.insurance.token');
             if (empty($token)) {
@@ -167,7 +166,7 @@ return $response ;
                 'error' => $e->getMessage(),
             ], 500);
         }
-    }
+}
 
 
  
