@@ -61,78 +61,109 @@ return $response ;
 
 
 
- 
-  
-    public function searchInsurance(Request $request)
-            {
-                try {
-                    // Validate request parameters
-                    $validated = $request->validate([
-                        'EndUserIp'       => 'required|ip',
-                        'PlanCategory'    => 'required|integer|in:1,2,3,4,5,6',
-                        'PlanCoverage'    => 'required|integer|in:1,2,3,4,5,6,7,8',
-                        'PlanType'        => 'required|integer|in:1,2',
-                        'TravelStartDate' => 'required|date',
-                        'TravelEndDate'   => 'required|date',
-                        'NoOfPax'         => 'required|integer|min:1',
-                        'PaxAge'          => 'required|array|min:1',
-                        'PaxAge.*'        => 'required|integer|min:1|max:100',
-                        'TokenId'         => 'required|string', 
-                    ]);
+     public function searchInsurance(Request $request)
+    {
+        try {
+            // Validate request parameters
+            $validated = $request->validate([
+                'EndUserIp'       => 'required|ip',
+                'PlanCategory'    => 'required|integer|in:1,2,3,4,5,6',
+                'PlanCoverage'    => 'required|integer|in:1,2,3,4,5,6,7,8',
+                'PlanType'        => 'required|integer|in:1,2',
+                'TravelStartDate' => 'required|date_format:Y-m-d',
+                'TravelEndDate'   => 'required|date_format:Y-m-d|after_or_equal:TravelStartDate',
+                'NoOfPax'         => 'required|integer|min:1',
+                'PaxAge'          => 'required|array|min:1',
+                'PaxAge.*'        => 'required|integer|min:1|max:100',
+            ]);
 
-                    // Log the token
-                    Log::info('Token received from request', ['TokenId' => $validated['TokenId']]);
-
-                    // Define API endpoint
-                    $apiUrl = "https://InsuranceBE.tektravels.com/InsuranceService.svc/rest/Search";
-
-                    // Send request to TekTravels API
-                    $response = Http::post($apiUrl, $validated);
-
-                    // Log the API response
-                    Log::info('API Response', [
-                        'status' => $response->status(),
-                        'body' => $response->body(),
-                    ]);
-
-                    // Check if API response failed
-                    if ($response->failed()) {
-                        return response()->json([
-                            'success' => false,
-                            'message' => 'API request failed. Please try again later.',
-                            'error'   => $response->body(),
-                        ], $response->status());
-                    }
-
-                    return response()->json([
-                        'success' => true,
-                        'data'    => $response->json(),
-                    ], 200);
-
-                } catch (\Illuminate\Validation\ValidationException $e) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Validation failed',
-                        'errors'  => $e->errors(),
-                    ], 422);
-
-                } catch (\Illuminate\Http\Client\RequestException $e) {
-                    Log::error('HTTP Client Error', ['error' => $e->getMessage()]);
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Failed to communicate with the insurance API',
-                        'error'   => $e->getMessage(),
-                    ], 500);
-
-                } catch (\Exception $e) {
-                    Log::error('Unexpected Error', ['error' => $e->getMessage()]);
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'An unexpected error occurred',
-                        'error'   => $e->getMessage(),
-                    ], 500);
-                }
+            // Get token from .env
+            $token = config('services.insurance.token');
+            if (empty($token)) {
+                Log::error('Insurance API token is not configured');
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Insurance API token is not configured',
+                ], 500);
             }
+
+            // Prepare payload with TokenID
+            $payload = array_merge($validated, ['TokenID' => $token]);
+
+            // Log request payload
+            Log::info('Insurance API Request Payload', ['payload' => $payload]);
+
+            // Define API endpoint
+            $apiUrl = 'https://api.travelboutiqueonline.com/InsuranceAPI_V1/InsuranceService.svc/rest/Search';
+
+            // Send request with headers
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+            ])->timeout(30)->post($apiUrl, $payload);
+
+            // Log response
+            Log::info('Insurance API Response', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            // Parse response
+            $responseData = $response->json();
+
+            // Check for API errors
+            if ($response->failed() || !empty($responseData['Error']['ErrorCode'])) {
+                $errorCode = $responseData['Error']['ErrorCode'] ?? 0;
+                $errorMessage = $responseData['Error']['ErrorMessage'] ?? 'Unknown error';
+
+                Log::error('Insurance API Error', [
+                    'error_code' => $errorCode,
+                    'error_message' => $errorMessage,
+                    'trace_id' => $responseData['TraceId'] ?? 'N/A',
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMessage,
+                    'error_code' => $errorCode,
+                    'trace_id' => $responseData['TraceId'] ?? null,
+                ], 400);
+            }
+
+            // Return success response
+            return response()->json([
+                'success' => true,
+                'data' => $responseData['Results'] ?? [],
+                'trace_id' => $responseData['TraceId'] ?? null,
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            Log::error('HTTP Client Error', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to communicate with the insurance API',
+                'error' => $e->getMessage(),
+            ], 500);
+        } catch (\Exception $e) {
+            Log::error('Unexpected Error', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'An unexpected error occurred',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+
+ 
+
 
 
 
