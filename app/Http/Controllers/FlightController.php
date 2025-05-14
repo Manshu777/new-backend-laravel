@@ -1185,28 +1185,84 @@ class FlightController extends Controller
 
 
 
-    function farequate(Request  $request)
-    {
-        $$token = $this->apiService->getToken();
+    public function fareQuote(Request $request)
+{
+    try {
+        // Use single $token
+        $token = $this->apiService->getToken();
 
+        // Validate request data
         $validatedData = $request->validate([
-            "EndUserIp" => "required",
-            "TraceId" => "required|string",
-            "ResultIndex" => "required|string"
-
+            'EndUserIp' => 'required|ip',
+            'TraceId' => 'required|string',
+            'ResultIndex' => 'required|string',
         ]);
-        $validatedData["TokenId"] = $token;
 
-        $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/FareQuote', $validatedData);
+        // Add TokenId to payload
+        $validatedData['TokenId'] = $token;
+
+        // Make API request
+        $response = Http::timeout(100)->withHeaders([])->post(
+            'https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/FareQuote',
+            $validatedData
+        );
+
+        // Handle token expiration
         if ($response->json('Response.Error.ErrorCode') === 6) {
-
-            $$token = $this->apiService->getToken();
-
-
-            $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/FareQuote', $validatedData);
+            $token = $this->apiService->getToken(); // Refresh token
+            $validatedData['TokenId'] = $token; // Update payload with new token
+            $response = Http::timeout(100)->withHeaders([])->post(
+                'https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/FareQuote',
+                $validatedData
+            );
         }
-        return $response;
+
+        // Check if response is successful
+        if ($response->successful()) {
+            return response()->json($response->json(), 200);
+        }
+
+        // Log and return error for unsuccessful response
+        \Log::error('FareQuote API request failed', [
+            'url' => 'https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/FareQuote',
+            'payload' => $validatedData,
+            'response' => $response->body(),
+        ]);
+
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Failed to fetch fare quote from API',
+            'details' => $response->json() ?? 'No response data',
+        ], $response->status());
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Validation failed',
+            'errors' => $e->errors(),
+        ], 422);
+    } catch (\Illuminate\Http\Client\RequestException $e) {
+        \Log::error('FareQuote API request timeout or connection error', [
+            'error' => $e->getMessage(),
+            'payload' => $validatedData ?? [],
+        ]);
+        return response()->json([
+            'status' => 'error',
+            'message' => 'API request timeout or connection error',
+            'error' => $e->getMessage(),
+        ], 503);
+    } catch (\Exception $e) {
+        \Log::error('FareQuote Error: ' . $e->getMessage(), [
+            'trace' => $e->getTraceAsString(),
+            'payload' => $validatedData ?? [],
+        ]);
+        return response()->json([
+            'status' => 'error',
+            'message' => 'An error occurred while fetching fare quote',
+            'error' => $e->getMessage(),
+        ], 500);
     }
+}
 }
 
 
