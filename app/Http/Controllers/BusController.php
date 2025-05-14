@@ -15,8 +15,7 @@ class BusController extends Controller
         $this->apiService = $apiService;
     }
 
-    // https://Sharedapi.tektravels.com/StaticData.svc/rest/GetBusCityList
-    // Method to search bus cities
+ 
 
 
     public function searchBusCityList(Request $request)
@@ -27,20 +26,20 @@ class BusController extends Controller
 
         $searchPayload = [
             "TokenId" => $token,
-            "IpAddress" =>  '223.178.208.102', // Use provided IP or fallback to a default
-            "ClientId" => 'ApiIntegrationNew',
+            "IpAddress" =>  '148.135.137.54', // Use provided IP or fallback to a default
+            "ClientId" => 'tboprod',
         ];
 
         $response = Http::timeout(100)
             ->withHeaders([])
-            ->post('https://Sharedapi.tektravels.com/StaticData.svc/rest/GetBusCityList', $searchPayload);
+            ->post('https://api.travelboutiqueonline.com/SharedAPI/StaticData.svc/rest/GetBusCityList', $searchPayload);
 
         if ($response->json('Response.Error.ErrorCode') === 6) {
             $token = $this->apiService->authenticate();
             $searchPayload['TokenId'] = $token;
              $response = Http::timeout(90)
                 ->withHeaders([])
-                ->post('https://Sharedapi.tektravels.com/StaticData.svc/rest/GetBusCityList', $searchPayload);
+                ->post('https://api.travelboutiqueonline.com/SharedAPI/StaticData.svc/rest/GetBusCityList', $searchPayload);
         }
 
        

@@ -30,7 +30,7 @@ class TransferController extends Controller
         // Prepare the payload for the API request
         $requestData = [
             "CityId" => $validated['cityId'],
-            "ClientId" => "apiintegrationnew",
+            "ClientId" => "tboprod",
             "EndUserIp" => $request->ip(), // Automatically get the user's IP
             "TransferCategoryType" => $validated['transferCategoryType'],
             "TokenId" => $token,
@@ -80,7 +80,7 @@ class TransferController extends Controller
 
     // Prepare the payload for the API request
     $requestData = [
-        'ClientId' => 'ApiIntegrationNew',
+        'ClientId' => 'tboprod',
         'EndUserIp' => $request->ip(),
         'TokenId' => $token,
         'SearchType' => $validated['SearchType'],
