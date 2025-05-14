@@ -59,7 +59,7 @@ class TransferSearchController extends Controller
 
             // Make the API request
             $response = Http::post(
-                'http://api.tektravels.com/BookingEngineService_Transfer/TransferService.svc/rest/Search/',
+                'https://TransferBE.tektravels.com/TransferService.svc/rest/Search',
                 $requestData
             );
 
