@@ -24,7 +24,7 @@ class FlightController extends Controller
     }
     public function searchFlights(Request $request)
     {
-        $$token = $this->apiService->getToken();
+        $token = $this->apiService->getToken();
     
         $validatedData = $request->validate([
             "EndUserIp" => 'required',
@@ -71,7 +71,7 @@ class FlightController extends Controller
         );
     
         if ($response->json('Response.Error.ErrorCode') === 6) {
-            $$token = $this->apiService->getToken();
+            $token = $this->apiService->authenticate();
             $response = Http::timeout(90)->withHeaders([])->post(
                 'https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/Search',
                 $searchPayload
@@ -141,7 +141,7 @@ class FlightController extends Controller
 
     public function bookFlight(Request $request)
     {
-        $$token = $this->apiService->getToken();
+        $token = $this->apiService->getToken();
     
         // Validate the request data, including Fare
         $validatedData = $request->validate([
@@ -230,7 +230,7 @@ class FlightController extends Controller
     
         // Handle token expiration
         if ($response->json('Response.Error.ErrorCode') === 6) {
-            $token = $this->apiService->getToken();
+            $token = $this->apiService->authenticate();
             $bookingPayload['TokenId'] = $token;
             $response = Http::timeout(90)->post('https://booking.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/Book', $bookingPayload);
         }
@@ -303,7 +303,7 @@ class FlightController extends Controller
         RateLimiter::hit($key, 60);
 
         // Get token securely
-        $$token = $this->apiService->getToken();
+        $token = $this->apiService->getToken();
 
         // Validate request with stricter rules
         $validatedData = $request->validate([
@@ -414,7 +414,7 @@ class FlightController extends Controller
             $response = Http::timeout(100)->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Book', $bookingPayload);
 
             if ($response->json('Response.Error.ErrorCode') === 6) {
-                $token = $this->apiService->getToken();
+                $token = $this->apiService->authenticate();
                 $bookingPayload['TokenId'] = $token;
                 $response = Http::timeout(90)->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Book', $bookingPayload);
             }
@@ -479,7 +479,7 @@ class FlightController extends Controller
 
     public function getCalendarFare(Request $request)
     {
-        $$token = $this->apiService->getToken();
+        $token = $this->apiService->getToken();
         try {
 
             $validated = $request->validate([
@@ -593,7 +593,7 @@ class FlightController extends Controller
     public function genrateTickBook(Request $request)
     {
         try {
-            $$token = $this->apiService->getToken();
+            $token = $this->apiService->getToken();
 
             // Validate the request data
             $validatedData = $request->validate([
@@ -691,7 +691,7 @@ class FlightController extends Controller
 
             // Handle token expiration
             if ($response->json('Response.Error.ErrorCode') === 6) {
-                $token = $this->apiService->getToken();
+                $token = $this->apiService->authenticate();
                 $bookingPayload['TokenId'] = $token;
                 $response = Http::timeout(90)->post('https://booking.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/Ticket', $bookingPayload);
 
@@ -769,7 +769,7 @@ class FlightController extends Controller
     public function getBookingDetails(Request $request)
     {
         try {
-            $$token = $this->apiService->getToken();
+            $token = $this->apiService->getToken();
 
             // Validate the request data
             $validatedData = $request->validate([
@@ -802,7 +802,7 @@ class FlightController extends Controller
 
             // Handle token expiration (ErrorCode 6)
             if ($response->json('Response.Error.ErrorCode') === 6) {
-                $token = $this->apiService->getToken(); // Refresh token
+                $token = $this->apiService->authenticate(); // Refresh token
                 $payload['TokenId'] = $token;
                 $response = Http::timeout(90)->post(
                     'https://booking.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/GetBookingDetails',
@@ -974,7 +974,7 @@ class FlightController extends Controller
     public function searchreturnflight(Request $request)
     {
 
-        $$token = $this->apiService->getToken();
+        $token = $this->apiService->getToken();
 
         $validatedData = $request->validate([
             "EndUserIp" => 'required',
@@ -1032,7 +1032,7 @@ class FlightController extends Controller
 
         if ($response->json('Response.Error.ErrorCode') === 6) {
 
-            $token = $this->apiService->getToken();
+            $token = $this->apiService->authenticate();
 
 
             $response = Http::timeout(90)->withHeaders([])->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Search', $searchPayload);
@@ -1050,7 +1050,7 @@ class FlightController extends Controller
     public function advance_search(Request $request)
     {
 
-        $$token = $this->apiService->getToken();
+        $token = $this->apiService->getToken();
 
         $validatedData = $request->validate([
             "EndUserIp" => 'required',
@@ -1113,7 +1113,7 @@ class FlightController extends Controller
 
         if ($response->json('Response.Error.ErrorCode') === 6) {
 
-            $token = $this->apiService->getToken();
+            $token = $this->apiService->authenticate();
 
 
             $response = Http::timeout(90)->withHeaders([])->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/PriceRBD', $searchPayload);
@@ -1126,7 +1126,7 @@ class FlightController extends Controller
 
    public function fareRules(Request  $request)
     {
-        $$token = $this->apiService->getToken();
+        $token = $this->apiService->getToken();
 
         $validatedData = $request->validate([
             "EndUserIp" => "required",
@@ -1139,7 +1139,7 @@ class FlightController extends Controller
         $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/FareRule', $validatedData);
         if ($response->json('Response.Error.ErrorCode') === 6) {
 
-            $token = $this->apiService->getToken();
+            $token = $this->apiService->authenticate();
 
 
             $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/FareRule', $validatedData);
@@ -1155,7 +1155,7 @@ class FlightController extends Controller
 
     function ssrrequest(Request $request)
     {
-        $$token = $this->apiService->getToken();
+        $token = $this->apiService->getToken();
 
 
         $validatedData = $request->validate([
@@ -1175,7 +1175,7 @@ class FlightController extends Controller
         $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/SSR', $searchpayload);
         if ($response->json('Response.Error.ErrorCode') === 6) {
 
-            $$token = $this->apiService->getToken();
+            $token = $this->apiService->authenticate();
 
 
             $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/SSR', $searchpayload);
@@ -1185,84 +1185,28 @@ class FlightController extends Controller
 
 
 
-    public function fareQuote(Request $request)
-{
-    try {
-        // Use single $token
+     function farequate(Request  $request)
+    {
         $token = $this->apiService->getToken();
 
-        // Validate request data
         $validatedData = $request->validate([
-            'EndUserIp' => 'required|ip',
-            'TraceId' => 'required|string',
-            'ResultIndex' => 'required|string',
+            "EndUserIp" => "required",
+            "TraceId" => "required|string",
+            "ResultIndex" => "required|string"
+
         ]);
+        $validatedData["TokenId"] = $token;
 
-        // Add TokenId to payload
-        $validatedData['TokenId'] = $token;
-
-        // Make API request
-        $response = Http::timeout(100)->withHeaders([])->post(
-            'https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/FareQuote',
-            $validatedData
-        );
-
-        // Handle token expiration
+        $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/FareQuote', $validatedData);
         if ($response->json('Response.Error.ErrorCode') === 6) {
-            $token = $this->apiService->getToken(); // Refresh token
-            $validatedData['TokenId'] = $token; // Update payload with new token
-            $response = Http::timeout(100)->withHeaders([])->post(
-                'https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/FareQuote',
-                $validatedData
-            );
+
+            $token = $this->apiService->authenticate();
+
+
+            $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/FareQuote', $validatedData);
         }
-
-        // Check if response is successful
-        if ($response->successful()) {
-            return response()->json($response->json(), 200);
-        }
-
-        // Log and return error for unsuccessful response
-        \Log::error('FareQuote API request failed', [
-            'url' => 'https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/FareQuote',
-            'payload' => $validatedData,
-            'response' => $response->body(),
-        ]);
-
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Failed to fetch fare quote from API',
-            'details' => $response->json() ?? 'No response data',
-        ], $response->status());
-
-    } catch (\Illuminate\Validation\ValidationException $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Validation failed',
-            'errors' => $e->errors(),
-        ], 422);
-    } catch (\Illuminate\Http\Client\RequestException $e) {
-        \Log::error('FareQuote API request timeout or connection error', [
-            'error' => $e->getMessage(),
-            'payload' => $validatedData ?? [],
-        ]);
-        return response()->json([
-            'status' => 'error',
-            'message' => 'API request timeout or connection error',
-            'error' => $e->getMessage(),
-        ], 503);
-    } catch (\Exception $e) {
-        \Log::error('FareQuote Error: ' . $e->getMessage(), [
-            'trace' => $e->getTraceAsString(),
-            'payload' => $validatedData ?? [],
-        ]);
-        return response()->json([
-            'status' => 'error',
-            'message' => 'An error occurred while fetching fare quote',
-            'error' => $e->getMessage(),
-        ], 500);
+        return $response;
     }
-}
 }
 
 
