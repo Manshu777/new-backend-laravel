@@ -122,7 +122,6 @@ Route::post('v1/bus/busblock', [BusControllerSearch::class, 'busBlock']);
 
 Route::post('v1/bus/book', [BusControllerSearch::class, 'bookbus']);
 
-// busBlock
 
 Route::post('v1/transfer-search', [TransferSearchController::class, 'searchTransfer']);
 

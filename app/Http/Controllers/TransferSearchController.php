@@ -7,6 +7,7 @@ use App\Services\ApiService;
 use Illuminate\Support\Facades\Http;
 
 
+use Illuminate\Support\Facades\Validator;
 class TransferSearchController extends Controller
 {
     protected $apiService;
@@ -16,64 +17,92 @@ class TransferSearchController extends Controller
         $this->apiService = $apiService;
     }
 
-    public function searchTransfer(Request $request)
+     
+     public function searchTransfer(Request $request)
     {
-        // Validate the request parameters
-        $validated = $request->validate([
-            'transferTime' => 'required|string', // e.g., "1030"
-            'transferDate' => 'required|date',   // e.g., "2021-01-07"
-            'adultCount' => 'required|integer|min:1',
-            'preferredLanguage' => 'required|integer',
-            'alternateLanguage' => 'required|integer',
-            'preferredCurrency' => 'required|string',
-            'pickupCode' => 'required|integer',
-            'pickupPointCode' => 'required|string', // e.g., "LGW"
-            'cityId' => 'required|string', // e.g., "126632"
-            'dropoffCode' => 'required|integer',
-            'dropoffPointCode' => 'required|string', // e.g., "LHR"
-            'countryCode' => 'required|string', // e.g., "GB"
+        // Validate incoming request
+        $validator = Validator::make($request->all(), [
+            'TransferTime' => 'required|string|regex:/^[0-9]{4}$/',
+            'TransferDate' => 'required|date|date_format:Y-m-d',
+            'AdultCount' => 'required|integer|min:1',
+            'PreferredLanguage' => 'required|integer',
+            'AlternateLanguage' => 'required|integer',
+            'PreferredCurrency' => 'required|string|size:3',
+            'PickUpCode' => 'required|integer',
+            'PickUpPointCode' => 'required|string',
+            'CityId' => 'required',
+            'DropOffCode' => 'required|integer',
+            'DropOffPointCode' => 'required|string',
+            'CountryCode' => 'required|string|size:2',
         ]);
-  
+
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => 'Validation failed',
+                'messages' => $validator->errors()
+            ], 422);
+        }
+
+        // Get validated data
+        $validated = $validator->validated();
+
+        // Prepare payload
+        $searchPayload = [
+            'TransferTime' => $validated['TransferTime'],
+            'TransferDate' => $validated['TransferDate'],
+            'AdultCount' => $validated['AdultCount'],
+            'PreferredLanguage' => $validated['PreferredLanguage'],
+            'AlternateLanguage' => $validated['AlternateLanguage'],
+            'PreferredCurrency' => $validated['PreferredCurrency'],
+            'IsBaseCurrencyRequired' => false,
+            'PickUpCode' => $validated['PickUpCode'],
+            'PickUpPointCode' => $validated['PickUpPointCode'],
+            'CityId' => $validated['CityId'],
+            'DropOffCode' => $validated['DropOffCode'],
+            'DropOffPointCode' => $validated['DropOffPointCode'],
+            'CountryCode' => $validated['CountryCode'],
+            'EndUserIp' => $request->ip(),
+            'TokenId' => $this->apiService->getToken(),
+        ];
+
         try {
-            // Retrieve the token using the ApiService
-            $token = $this->apiService->getToken();
-
-            // Prepare the payload for the API request
-            $requestData = [
-                "TransferTime" => $validated['transferTime'],
-                "TransferDate" => $validated['transferDate'],
-                "AdultCount" => $validated['adultCount'],
-                "PreferredLanguage" => $validated['preferredLanguage'],
-                "AlternateLanguage" => $validated['alternateLanguage'],
-                "PreferredCurrency" => $validated['preferredCurrency'],
-                "IsBaseCurrencyRequired" => false,
-                "PickUpCode" => $validated['pickupCode'],
-                "PickUpPointCode" => $validated['pickupPointCode'],
-                "CityId" => $validated['cityId'],
-                "DropOffCode" => $validated['dropoffCode'],
-                "DropOffPointCode" => $validated['dropoffPointCode'],
-                "CountryCode" => $validated['countryCode'],
-                "EndUserIp" => $request->ip(), // Automatically capture the client's IP
-                "TokenId" => $token,
-            ];
-
-            // Make the API request
-            $response = Http::post(
+            $response = Http::timeout(100)->post(
                 'https://TransferBE.tektravels.com/TransferService.svc/rest/Search',
-                $requestData
+                $searchPayload
             );
 
-            // Check if the response was successful
-            if ($response->successful()) {
-                $data = $response->json();
-                return response()->json($data);
-            } else {
-                // Handle API response errors
-                return response()->json(['error' => 'Failed to fetch transfer search results.'], $response->status());
+            $results = $response->json();
+
+            // Handle token expiration
+            if (isset($results['Response']['Error']['ErrorCode']) && $results['Response']['Error']['ErrorCode'] === 6) {
+                $searchPayload['TokenId'] = $this->apiService->authenticate();
+                
+                $response = Http::timeout(100)->post(
+                    'https://TransferBE.tektravels.com/TransferService.svc/rest/Search',
+                    $searchPayload
+                );
+                
+                $results = $response->json();
             }
+
+            // Check for API errors
+            if (isset($results['Response']['Error']['ErrorCode']) && $results['Response']['Error']['ErrorCode'] !== 0) {
+                return response()->json([
+                    'error' => 'API error',
+                    'message' => $results['Response']['Error']['ErrorMessage']
+                ], 400);
+            }
+
+            return response()->json($results);
         } catch (\Exception $e) {
-            // Handle exceptions
-            return response()->json(['error' => $e->getMessage()], 500);
+            return response()->json([
+                'error' => 'Server error',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
+
+      
+
+
 }
