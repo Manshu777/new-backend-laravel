@@ -44,7 +44,7 @@ use App\Http\Controllers\CharterController;
 
 use App\Http\Controllers\SitelayoutController;
 
-
+use App\Mail\InsuranceBookingConfirmation;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -166,7 +166,7 @@ Route::post("v1/cruise",[CruiseController::class,"sendCruiseMessage"]);
 Route::post("v1/charter",[CharterController::class,"sendCharterMessage"]);
 Route::resource('v1/hotels/checkins', CheckinsController::class);
 Route::post("v1/hotelreg/booked",[BookedhotelsController::class,"bookhotel"]);
-
+Route::post('/v1/test-email', [InsuranceController::class, 'testEmail']);
 use App\Http\Controllers\LastUpdateController;
 Route::get("v1/latestUpdate",[LastUpdateController::class,"getLAstUpdate"]);
 

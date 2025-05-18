@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http; 
+use App\Mail\BusBookingConfirmation;
+use App\Models\BusBooking;
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\ApiService;
-
-
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class BusControllerSearch extends Controller
 {
@@ -137,86 +140,174 @@ class BusControllerSearch extends Controller
         return   response()->json(["buslayout"=>json_decode($buslayout),"busbording"=>json_decode($busBOARDING)]);
 
 
-    }
-    public function bookbus(Request $request)
-    {
-        try {
-            $token = $this->apiService->getToken();
-    
-            $validatedData = $request->validate([
-                'TraceId' => 'required|string',
-                'BoardingPointId' => 'required|integer',
-                'DropingPointId' => 'required|integer',
-                'ResultIndex' => 'required|string',
-                'passenger' => 'required|array'
-            ]);
-    
-            $searchData = [
-                "EndUserIp" => "148.135.137.54",
-                "ResultIndex" => $validatedData["ResultIndex"],
-                "TraceId" => $validatedData["TraceId"],
-                "TokenId" => $token,
-                "BoardingPointId" => $validatedData["BoardingPointId"],
-                "DropingPointId" => $validatedData["DropingPointId"],
-                "Passenger" => $validatedData["passenger"]
-            ];
-    
-            $bookbus = Http::timeout(90)->post('https://api.travelboutiqueonline.com/BusAPI_V10/BusService.svc/rest/Book', $searchData);
-    
-            // Log full API response for debugging
-            \Log::info('Book Bus API Response:', $bookbus->json());
-    
-            // Try to retrieve error info safely
-            $errorCode = data_get($bookbus->json(), 'Response.Error.ErrorCode');
-            $errorMessage = data_get($bookbus->json(), 'Response.Error.ErrorMessage');
-    
-            // Handle token expiration (ErrorCode 6)
-            if ($errorCode === 6) {
-                $token = $this->apiService->authenticate();
-                $searchData['TokenId'] = $token;
-                $bookbus = Http::timeout(90)->post('https://api.travelboutiqueonline.com/BusAPI_V10/BusService.svc/rest/Book', $searchData);
-    
-                // Update error info again after re-auth
-                $errorCode = data_get($bookbus->json(), 'Response.Error.ErrorCode');
-                $errorMessage = data_get($bookbus->json(), 'Response.Error.ErrorMessage');
-            }
-    
-            // If there's any error code other than 0, return it
-            if ($errorCode !== 0) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $errorMessage ?? 'Booking failed',
-                    'error_code' => $errorCode,
-                    'response' => $bookbus->json()
-                ], 400);
-            }
-    
-            return response()->json([
-                'success' => true,
-                'data' => $bookbus->json()
-            ]);
-    
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation Error',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (\Illuminate\Http\Client\RequestException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'HTTP request failed',
-                'error' => $e->getMessage()
-            ], 500);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Something went wrong',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-    
+    }  
 
+public function bookbus(Request $request)
+{
+    try {
+        $token = $this->apiService->getToken();
+
+        // Transform request data to match validation expectations
+        $requestData = $request->all();
+        if (isset($requestData['Passenger'])) {
+            $requestData['passenger'] = array_map(function ($passenger) {
+                return [
+                    'name' => $passenger['FirstName'] . ' ' . $passenger['LastName'],
+                    'email' => $passenger['Email'],
+                    'phone' => $passenger['Phoneno'],
+                    'FirstName' => $passenger['FirstName'],
+                    'LastName' => $passenger['LastName'],
+                    'Title' => $passenger['Title'],
+                    'Age' => $passenger['Age'],
+                    'Gender' => $passenger['Gender'],
+                    'IdType' => $passenger['IdType'],
+                    'IdNumber' => $passenger['IdNumber'],
+                    'Address' => $passenger['Address'],
+                    'Seat' => $passenger['Seat'],
+                    'LeadPassenger' => $passenger['LeadPassenger'],
+                    'PassengerId' => $passenger['PassengerId'],
+                ];
+            }, $requestData['Passenger']);
+            unset($requestData['Passenger']);
+        }
+        if (isset($requestData['DroppingPointId'])) {
+            $requestData['DroppingPointId'] = $requestData['DroppingPointId'];
+        }
+        $request->replace($requestData);
+
+        $validatedData = $request->validate([
+            'TraceId' => 'required|string',
+            'BoardingPointId' => 'required|integer',
+            'DroppingPointId' => 'required|integer', // Fixed spelling
+            'ResultIndex' => 'required', // Allow integer or string
+            'passenger' => 'required|array',
+            'passenger.*.name' => 'required|string',
+            'passenger.*.email' => 'required|email',
+            'passenger.*.phone' => 'required|string',
+            'passenger.*.FirstName' => 'required|string',
+            'passenger.*.LastName' => 'required|string',
+            'passenger.*.Title' => 'required|string',
+            'passenger.*.Age' => 'required|integer',
+            'passenger.*.Gender' => 'required|integer',
+            'passenger.*.IdType' => 'required|integer',
+            'passenger.*.IdNumber' => 'required|string',
+            'passenger.*.Address' => 'required|string',
+            'passenger.*.LeadPassenger' => 'required|boolean',
+            'passenger.*.PassengerId' => 'required|integer',
+            'passenger.*.Seat' => 'required|array',
+        ]);
+
+        // Cast ResultIndex to string for API
+        $validatedData['ResultIndex'] = (string) $validatedData['ResultIndex'];
+
+        // Prepare API payload, maintaining original field names
+        $searchData = [
+            'EndUserIp' => '148.135.137.54',
+            'ResultIndex' => $validatedData['ResultIndex'],
+            'TraceId' => $validatedData['TraceId'],
+            'TokenId' => $token,
+            'BoardingPointId' => $validatedData['BoardingPointId'],
+            'DroppingPointId' => $validatedData['DroppingPointId'], // Fixed spelling
+            'Passenger' => array_map(function ($passenger) {
+                // Revert to original field names for API
+                return [
+                    'FirstName' => $passenger['FirstName'],
+                    'LastName' => $passenger['LastName'],
+                    'Email' => $passenger['email'],
+                    'Phoneno' => $passenger['phone'],
+                    'Title' => $passenger['Title'],
+                    'Age' => $passenger['Age'],
+                    'Gender' => $passenger['Gender'],
+                    'IdType' => $passenger['IdType'],
+                    'IdNumber' => $passenger['IdNumber'],
+                    'Address' => $passenger['Address'],
+                    'Seat' => $passenger['Seat'],
+                    'LeadPassenger' => $passenger['LeadPassenger'],
+                    'PassengerId' => $passenger['PassengerId'],
+                ];
+            }, $validatedData['passenger']),
+        ];
+
+        $bookbus = Http::timeout(90)->post('https://api.travelboutiqueonline.com/BusAPI_V10/BusService.svc/rest/Book', $searchData);
+
+        Log::info('Book Bus API Response:', $bookbus->json());
+
+        $errorCode = data_get($bookbus->json(), 'BookResult.Error.ErrorCode');
+        $errorMessage = data_get($bookbus->json(), 'BookResult.Error.ErrorMessage');
+
+        if ($errorCode === 6) {
+            $token = $this->apiService->authenticate();
+            $searchData['TokenId'] = $token;
+            $bookbus = Http::timeout(90)->post('https://api.travelboutiqueonline.com/BusAPI_V10/BusService.svc/rest/Book', $searchData);
+            $errorCode = data_get($bookbus->json(), 'BookResult.Error.ErrorCode');
+            $errorMessage = data_get($bookbus->json(), 'BookResult.Error.ErrorMessage');
+        }
+
+        if ($errorCode !== 0) {
+            return response()->json([
+                'success' => false,
+                'message' => $errorMessage ?? 'Booking failed',
+                'error_code' => $errorCode,
+                'response' => $bookbus->json()
+            ], 400);
+        }
+
+        // Save booking details to database
+        $bookingData = $bookbus->json()['BookResult'];
+        $booking = BusBooking::create([
+            'trace_id' => $bookingData['TraceId'],
+            'booking_status' => $bookingData['BusBookingStatus'],
+            'invoice_amount' => $bookingData['InvoiceAmount'],
+            'invoice_number' => $bookingData['InvoiceNumber'],
+            'bus_id' => $bookingData['BusId'],
+            'ticket_no' => $bookingData['TicketNo'],
+            'travel_operator_pnr' => $bookingData['TravelOperatorPNR'],
+            'passenger_details' => json_encode($validatedData['passenger']),
+        ]);
+
+        // Generate PDF
+        $pdf = Pdf::loadView('pdf.booking-confirmation', [
+            'booking' => $bookingData,
+            'passengers' => $validatedData['passenger'],
+        ]);
+
+        $pdfPath = storage_path('app/public/booking_' . $booking->id . '.pdf');
+        $pdf->save($pdfPath);
+
+        // Send confirmation email with PDF attachment
+        $primaryPassenger = $validatedData['passenger'][0];
+        Mail::to($primaryPassenger['email'])->send(new BusBookingConfirmation(
+            $bookingData,
+            $validatedData['passenger'],
+            $pdfPath
+        ));
+
+        return response()->json([
+            'success' => true,
+            'data' => $bookbus->json(),
+            'booking_id' => $booking->id
+        ]);
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation Error',
+            'errors' => $e->errors()
+        ], 422);
+    } catch (\Illuminate\Http\Client\RequestException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'HTTP request failed',
+            'error' => $e->getMessage()
+        ], 500);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Something went wrong',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+  
    
 }

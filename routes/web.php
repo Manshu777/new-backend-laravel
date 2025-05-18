@@ -16,6 +16,37 @@ Route::get('/', function () {
 
 use Barryvdh\DomPDF\Facade\Pdf;
 
+// In routes/web.php or routes/api.php
+Route::get('/test-view', function () {
+    $bookingDetails = [
+        'pax' => [
+            'Title' => 'Mr',
+            'FirstName' => 'Test',
+            'LastName' => 'User',
+            'EmailId' => 'test@example.com',
+            'PhoneNumber' => '1234567890',
+            'AddressLine1' => 'Test Address',
+            'City' => 'Test City',
+            'Country' => 'India',
+            'PinCode' => '123456',
+            'MajorDestination' => 'INDIA',
+            'Price' => ['GrossFare' => 1000],
+        ],
+        'itinerary' => [
+            'BookingId' => 123,
+            'InsuranceId' => 456,
+            'PlanName' => 'Test Plan',
+        ],
+        'coverageHtml' => '<li>Test Coverage: INR 1000</li>',
+        'startDate' => 'June 1, 2025',
+        'endDate' => 'June 30, 2025',
+        'bookingDate' => 'May 18, 2025',
+        'dob' => 'July 17, 1990',
+        'recipientEmail' => 'test@example.com',
+    ];
+    return view('pdf.insurance_booking_confirmation', $bookingDetails);
+});
+
 Route::get('/test-email-view', function () {
 
 
