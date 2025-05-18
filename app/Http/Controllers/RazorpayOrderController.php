@@ -28,7 +28,7 @@ class RazorpayOrderController extends Controller
 
         try {
             // Initialize Razorpay API
-            $api = new Api(env('RAZORPAY_KEY'), env('RAZORPAY_SECRET'));
+              $api = new Api('rzp_test_Bi57EMsQ6K7ZZH', '0aDJHaixAC4Xd87EVU7Gx2zN');
 
             // Create Razorpay order
             $orderData = [

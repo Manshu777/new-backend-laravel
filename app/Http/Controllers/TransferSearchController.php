@@ -21,6 +21,7 @@ class TransferSearchController extends Controller
      public function searchTransfer(Request $request)
     {
         // Validate incoming request
+             // Validate incoming request
         $validator = Validator::make($request->all(), [
             'TransferTime' => 'required|string|regex:/^[0-9]{4}$/',
             'TransferDate' => 'required|date|date_format:Y-m-d',
@@ -36,6 +37,7 @@ class TransferSearchController extends Controller
             'CountryCode' => 'required|string|size:2',
         ]);
 
+        
         if ($validator->fails()) {
             return response()->json([
                 'error' => 'Validation failed',

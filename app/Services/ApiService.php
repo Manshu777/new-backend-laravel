@@ -22,8 +22,8 @@ class ApiService
     {
         $response = Http::post('http://Sharedapi.tektravels.com/SharedData.svc/rest/Authenticate', [
             'ClientId' => $this->clientId,
-            'UserName' => $this->username,
-            'Password' => $this->password,
+            'UserName' => 'Next',
+            'Password' =>  "Next@1234",
             'EndUserIp' => '148.135.137.54',
         ]);
     

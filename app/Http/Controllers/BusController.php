@@ -26,8 +26,8 @@ class BusController extends Controller
 
         $searchPayload = [
             "TokenId" => $token,
-            "IpAddress" =>  '148.135.137.54', // Use provided IP or fallback to a default
-            "ClientId" => 'tboprod',
+            "IpAddress" =>  '148.135.137.54',
+            "ClientId" => 'ApiIntegrationNew',
         ];
 
         $response = Http::timeout(100)
