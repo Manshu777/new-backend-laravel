@@ -73,7 +73,7 @@ class InsuranceController extends Controller
         $validated["TokenId"] = $token;
 
         // Define API endpoint
-        $apiUrl = "https://api.travelboutiqueonline.com/InsuranceAPI_V1/InsuranceService.svc/rest/Search";
+        $apiUrl = "https://InsuranceBE.tektravels.com/InsuranceService.svc/rest/Search";
 
         // Send request to TekTravels API
         $response = Http::post($apiUrl, $validated);
@@ -197,7 +197,7 @@ class InsuranceController extends Controller
         ]);
 
         // Call API
-        $apiUrl = 'https://booking.travelboutiqueonline.com/InsuranceAPI_V1/InsuranceService.svc/rest/Book';
+        $apiUrl = 'https://InsuranceBE.tektravels.com/InsuranceService.svc/rest/Book';
         $maxRetries = 1;
         $retryCount = 0;
 
@@ -472,7 +472,7 @@ class InsuranceController extends Controller
             Log::info('Insurance policy generation request', ['data' => $validated]);
 
             // Call API
-            $apiUrl = 'https://booking.travelboutiqueonline.com/InsuranceAPI_V1/InsuranceService.svc/rest/GeneratePolicy';
+            $apiUrl = 'https://InsuranceBE.tektravels.com/InsuranceService.svc/rest/GeneratePolicy';
             $response = Http::timeout(90)
                 ->withHeaders([
                     'Content-Type' => 'application/json',
@@ -793,7 +793,7 @@ class InsuranceController extends Controller
                 Log::info('Insurance booking details request', ['data' => $validated]);
 
                 // Call API
-                $apiUrl = 'https://booking.travelboutiqueonline.com/InsuranceAPI_V1/InsuranceService.svc/rest/GetBookingDetail';
+                $apiUrl = 'https://InsuranceBE.tektravels.com/InsuranceService.svc/rest/GetBookingDetail';
                 $response = Http::timeout(90)
                     ->withHeaders([
                         'Content-Type' => 'application/json',
