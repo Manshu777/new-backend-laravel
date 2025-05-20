@@ -4,7 +4,7 @@ use App\Http\Controllers\InvoiceController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\FlightController;
 use Illuminate\Support\Facades\File;
-use App\Mail\BookingConfirmation;
+use App\Mail\FlightBookingConfirmation;
 use Illuminate\Support\Facades\Mail;
 
 use Illuminate\Support\Str;
@@ -16,224 +16,113 @@ Route::get('/', function () {
 
 use Barryvdh\DomPDF\Facade\Pdf;
 
-// In routes/web.php or routes/api.php
-Route::get('/test-view', function () {
-    $bookingDetails = [
-        'pax' => [
-            'Title' => 'Mr',
-            'FirstName' => 'Test',
-            'LastName' => 'User',
-            'EmailId' => 'test@example.com',
-            'PhoneNumber' => '1234567890',
-            'AddressLine1' => 'Test Address',
-            'City' => 'Test City',
-            'Country' => 'India',
-            'PinCode' => '123456',
-            'MajorDestination' => 'INDIA',
-            'Price' => ['GrossFare' => 1000],
-        ],
-        'itinerary' => [
-            'BookingId' => 123,
-            'InsuranceId' => 456,
-            'PlanName' => 'Test Plan',
-        ],
-        'coverageHtml' => '<li>Test Coverage: INR 1000</li>',
-        'startDate' => 'June 1, 2025',
-        'endDate' => 'June 30, 2025',
-        'bookingDate' => 'May 18, 2025',
-        'dob' => 'July 17, 1990',
-        'recipientEmail' => 'test@example.com',
-    ];
-    return view('pdf.insurance_booking_confirmation', $bookingDetails);
-});
 
-Route::get('/test-email-view', function () {
-
-
-    $ticket = [
-        'pnr' => Str::random(6),  // Random PNR (6-character string)
-        'booking_id' => rand(100000, 999999), // Random booking ID (6 digits)
-        'user_name' => 'John Doe', // Random user name
-        'username' => 'johndoe' . rand(1, 999) . '@example.com', // Random email
-        'phone_number' => '+1' . rand(1000000000, 9999999999), // Random phone number (US format)
-        'issued_date' => now()->format('d F Y'),
-        
-        // Dynamically fill flight details with random data
-        'flight_name' => 'Airline ' . rand(1, 10), // Random airline name
-        'flight_number' => 'FL' . rand(1000, 9999), // Random flight number
-        'arrival_to' => 'Airport ' . rand(1, 5), // Random airport name for destination
-        'departure_from' => 'Airport ' . rand(1, 5), // Random airport name for origin
-        
-        // Fare details with random values
-        'total_fare' => rand(100, 9999), // Random fare amount
-        'usd_amount' => rand(100, 9999), // Random USD amount
-        'conversion_rate' => round(rand(50, 100) / 10, 2), // Random conversion rate between 5.0 and 10.0
-        
-        // Flight route and flight date
-        'route' => 'Airport ' . rand(1, 5) . ' - ' . 'Airport ' . rand(1, 5), // Random route
-        'flight_date' => \Carbon\Carbon::now()->addDays(rand(1, 30))->format('d F Y'), // Random flight date within next 30 days
-        'passenger_name' => 'John',
-        'gender' => 'Male',
-        'nationality' => 'IN',
-        //full_route
-        
-        'full_route' => 'Airport ' . rand(1, 5) . ' - ' . 'Airport ' . rand(1, 5), // Random route
-        'ticket_no' => 'TICKET' . rand(1000, 9999), 
-        'base_fare' => rand(100, 9999), // Random base fare
-        'tax' => rand(10, 100), // Random tax amount
-        'total_bdt' => rand(100, 9999), // Random total amount in BDT
-
-        'date' => now()->toDateString(),
-     
-        'time' => now()->format('H:i:s'),
-        'status' => 'Confirmed',
-        'flight_date' => now()->toDateString(),
-
-        'passengers' => [
-            [
-                'passenger_name' => 'John',
-                'LastName' => 'Doe',
-                'Email' => 'johndoe@example.com',
-                'ContactNo' => '+1' . rand(1000000000, 9999999999),
-            ],
-        ], 
-    ];
-    
-
-    
-    Mail::to('manshu.developer@gmail.com')->send(new BookingConfirmation($ticket));
-    return view('emails.invoice', compact('ticket'));
-
-
-});
-
-
-
-Route::get('/test-bus-ticket-email', function () {
-    $dummyPassenger = [
-        'FirstName' => 'John',
-        'LastName' => 'Doe',
-        'Email' => 'manshu.developer@gmail.com',
-        'Phoneno' => '9876543210',
-    ];
-
-    $dummyResult = [
-        'TicketNo' => '4AK77DG5',
-        'TravelOperatorPNR' => '4AK77DG5',
-        'InvoiceNumber' => 'MW/2425/12905',
-        'InvoiceAmount' => 297.00,
-        'BusBookingStatus' => 'Confirmed',
-    ];
-
-    Mail::send('emails.bus_ticket_invoice', [
-        'ticket_no' => $dummyResult['TicketNo'],
-        'pnr' => $dummyResult['TravelOperatorPNR'],
-        'invoice_no' => $dummyResult['InvoiceNumber'],
-        'amount' => $dummyResult['InvoiceAmount'],
-        'status' => $dummyResult['BusBookingStatus'],
-        'passenger_name' => $dummyPassenger['FirstName'] . ' ' . $dummyPassenger['LastName'],
-        'email' => $dummyPassenger['Email'],
-        'phone' => $dummyPassenger['Phoneno'],
-    ], function ($message) use ($dummyPassenger, $dummyResult) {
-        $message->to($dummyPassenger['Email'], $dummyPassenger['FirstName'])
-                ->subject('Your Bus Ticket - ' . $dummyResult['TicketNo']);
-    });
-
-    return 'Test email sent to ' . $dummyPassenger['Email'];
-});
-
-
-
-
-Route::get('/generate-bus-ticket', function () {
-    $passenger = [
-        'FirstName' => 'John',
-        'LastName' => 'Doe',
-        'Email' => 'manshu.developer@gmail.com',
-        'Phoneno' => '9876543210',
-    ];
-
-    $result = [
-        'TicketNo' => '4AK77DG5',
-        'TravelOperatorPNR' => '4AK77DG5',
-        'InvoiceNumber' => 'MW/2425/12905',
-        'InvoiceAmount' => 297.00,
-        'BusBookingStatus' => 'Confirmed',
-    ];
-
-    $routeDetails = [
-        'source' => 'Delhi',
-        'destination' => 'Jaipur',
-        'departure' => '2025-05-05 08:00 AM',
-        'arrival' => '2025-05-05 12:30 PM',
-        'bus_name' => 'Super Deluxe Volvo',
-        'seat_no' => 'A1',
-    ];
-
-    $pdf = PDF::loadView('emails.bus_ticket_invoice', [
-        'ticket_no' => $result['TicketNo'],
-        'pnr' => $result['TravelOperatorPNR'],
-        'invoice_no' => $result['InvoiceNumber'],
-        'amount' => $result['InvoiceAmount'],
-        'status' => $result['BusBookingStatus'],
-        'passenger_name' => $passenger['FirstName'] . ' ' . $passenger['LastName'],
-        'email' => $passenger['Email'],
-        'phone' => $passenger['Phoneno'],
-        'source' => $routeDetails['source'],
-        'destination' => $routeDetails['destination'],
-        'departure' => $routeDetails['departure'],
-        'arrival' => $routeDetails['arrival'],
-        'bus_name' => $routeDetails['bus_name'],
-        'seat_no' => $routeDetails['seat_no'],
-    ]);
-
-    $pdfPath = storage_path('app/public/ticket.pdf');
-    $pdf->save($pdfPath);
-
-    if (file_exists($pdfPath)) {
-        Mail::send([], [], function ($message) use ($passenger, $result, $pdfPath) {
-            $message->to($passenger['Email'], $passenger['FirstName'])
-                ->subject('Your Bus Ticket - ' . $result['TicketNo'])
-                ->attach($pdfPath, [
-                    'as' => 'Bus_Ticket.pdf',
-                    'mime' => 'application/pdf',
-                ])
-                ->html('Dear ' . $passenger['FirstName'] . ', your bus ticket is attached as a PDF. Please carry it during your journey.');
-        });
-        unlink($pdfPath);
-    }
-
-    return $pdf->download('Bus_Ticket.pdf');
-});
-
-Route::get('/invoice-email-view', function () {
-    $ticket = [
-        'pnr' => 'TEST123',
-        'user_name' => 'Test User',
-        'username' => 'test@example.com',
-        'flight_name' => 'Test Airlines',
-        'flight_number' => 'TA001',
-        'departure_from' => 'Test City',
-        'flight_date' => '2025-04-25 10:00:00',
-        'arrival_to' => 'Test Destination',
-        'return_date' => '2025-04-25 12:30:00',
-        'total_fare' => 1000,
-        'booking_id' => 'BOOK123',
-        'phone_number' => '1234567890',
-        'date_of_booking' => '2025-04-20',
-
-        // Extra fields
-        'payment_method' => 'Credit Card',
-        'class' => 'Economy',
-        'seat_number' => '12A',
-        'airline_code' => 'TA',
-        'transaction_id' => 'TXN987654321',
-    ];
-
-    return view('emails.invoice', compact('ticket'));
-});
 
 use Illuminate\Support\Facades\Artisan;
+
+
+Route::get('/test-flight-email', function () {
+    $ticket = [ /* Dummy data from previous response */ ];
+    try {
+        Mail::to('test@nextgentrip.com')
+            ->send(new FlightBookingConfirmation($ticket, $ticket['username']));
+        return response()->json(['message' => 'Test email with PDF invoice sent successfully']);
+    } catch (\Exception $e) {
+        return response()->json(['message' => 'Failed to send test email', 'error' => $e->getMessage()], 500);
+    }
+});
+
+
+Route::get('/test-email', function () {
+    // Dummy data based on provided JSON
+    $ticket = [
+        'pnr' => 'C5EW7F',
+        'booking_id' => 1982805,
+        'user_name' => 'Manshu Mehra',
+        'username' => 'manshu.developer@gmail.com',
+        'phone_number' => '7988532993',
+        'issued_date' => now()->format('d F Y'),
+        'flight_name' => 'SpiceJet',
+        'flight_number' => '533',
+        'arrival_to' => 'Kempegowda International Airport',
+        'departure_from' => 'Indira Gandhi Airport',
+        'total_fare' => 3792.77,
+        'usd_amount' => 3484.69,
+        'conversion_rate' => 1,
+        'full_route' => 'Indira Gandhi Airport - Kempegowda International Airport',
+        'flight_date' => '29 May 2025',
+        'date_of_booking' => now()->toDateString(),
+        'invoice_no' => 'DW/2526/5945',
+        'airline_toll_free_no' => '9876543210',
+        'passengers' => [
+            [
+                'Title' => 'Mr',
+                'FirstName' => 'Manshu',
+                'LastName' => 'Mehra',
+                'PaxType' => 1,
+                'DateOfBirth' => '1997-07-19',
+                'Gender' => 1,
+                'PassportNo' => 'AAAN1234',
+                'PassportExpiry' => '2047-07-19',
+                'AddressLine1' => 'ambala',
+                'City' => 'ambala',
+                'CountryCode' => 'IN',
+                'ContactNo' => '7988532993',
+                'Email' => 'manshu.developer@gmail.com',
+                'IsLeadPax' => true,
+                'Fare' => [
+                    'Currency' => 'INR',
+                    'BaseFare' => 2499,
+                    'Tax' => 1292,
+                    'YQTax' => 900,
+                    'AdditionalTxnFeePub' => 0.0,
+                    'AdditionalTxnFeeOfrd' => 0.0,
+                    'OtherCharges' => 1.77,
+                    'Discount' => 0.0,
+                    'PublishedFare' => 3792.77,
+                    'OfferedFare' => 3484.69,
+                    'TdsOnCommission' => 73.77,
+                    'TdsOnPLB' => 63.28,
+                    'TdsOnIncentive' => 68.33,
+                    'ServiceFee' => 0,
+                ],
+            ],
+        ],
+        'segments' => [
+            [
+                'Baggage' => '15 KG',
+                'CabinBaggage' => '7 KG',
+                'Airline' => [
+                    'AirlineName' => 'SpiceJet',
+                    'FlightNumber' => '533',
+                ],
+                'Origin' => [
+                    'DepTime' => '2025-05-29T06:20:00',
+                    'Airport' => [
+                        'AirportName' => 'Indira Gandhi Airport',
+                        'Terminal' => '1D',
+                    ],
+                ],
+                'Destination' => [
+                    'ArrTime' => '2025-05-29T09:20:00',
+                    'Airport' => [
+                        'AirportName' => 'Kempegowda International Airport',
+                        'Terminal' => '1',
+                    ],
+                ],
+            ],
+        ],
+    ];
+
+    // Send the test email
+    try {
+        Mail::to('manshu.developer@gmail.com') // Replace with your test email or Mailtrap inbox
+            ->send(new FlightBookingConfirmation($ticket, $ticket['username']));
+        return response()->json(['message' => 'Test email sent successfully']);
+    } catch (\Exception $e) {
+        return response()->json(['message' => 'Failed to send test email', 'error' => $e->getMessage()], 500);
+    }
+});
 
 
 Route::get('/create-storage-link', function () {

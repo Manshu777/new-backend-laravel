@@ -19,6 +19,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+       \Blade::directive('latexescape', function ($expression) {
+        return "<?php echo str_replace(
+            ['\\', '&', '%', '\$', '#', '_', '{', '}', '~', '^'],
+            ['\\\\', '\\&', '\\%', '\\\$', '\\#', '\\_', '\\{', '\\}', '\\textasciitilde{}', '\\textasciicircum{}'],
+            $expression
+        ); ?>";
+    });
     }
 }
