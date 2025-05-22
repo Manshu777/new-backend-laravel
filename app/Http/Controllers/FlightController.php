@@ -256,6 +256,18 @@ class FlightController extends Controller
             ]);
 
 
+
+                $invoiceData = [
+                'InvoiceNo' => $bookingResponse['FlightItinerary']['InvoiceNo'],
+                'InvoiceAmount' => $bookingResponse['FlightItinerary']['InvoiceAmount'],
+                'InvoiceCreatedOn' => $bookingResponse['FlightItinerary']['InvoiceCreatedOn'],
+                'Currency' => $bookingResponse['FlightItinerary']['Fare']['Currency'],
+                'BaseFare' => $bookingResponse['FlightItinerary']['Fare']['BaseFare'],
+                'Tax' => $bookingResponse['FlightItinerary']['Fare']['Tax'],
+                'OtherCharges' => $bookingResponse['FlightItinerary']['Fare']['OtherCharges'],
+            ];
+            $passengerData = $bookingResponse['FlightItinerary']['Passenger'];
+
             $ticket = [
                 'pnr' => $bookingResponse['PNR'],
                 'booking_id' => $bookingResponse['Response']['BookingId'],
@@ -282,7 +294,7 @@ class FlightController extends Controller
             ];
             
             $ticket['passengers'] = $validatedData['Passengers']; 
-            Mail::to($validatedData['email'])->send(new BookingConfirmation($ticket));
+  Mail::to($validatedData['email'])->send(new BookingConfirmationMail($bookingData, $passengerData, $invoiceData));
            
 
 
@@ -455,7 +467,7 @@ class FlightController extends Controller
                 ];
 
                 // Send booking confirmation email
-                Mail::to($validatedData['Passengers'][0]['Email'])->send(new BookingConfirmation($ticket));
+                Mail::to($validatedData['Email'])->send(new BookingConfirmation($ticket));
 
                 return response()->json([
                     'status' => 'success',
