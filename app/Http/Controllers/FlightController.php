@@ -14,7 +14,8 @@ use App\Mail\BookingConfirmation;
 use Illuminate\Support\Facades\Mail;
 use App\Models\RazorpayOrder;
 
-
+use App\Mail\BookingConfirmationMail;
+use Illuminate\Support\Facades\Log;
 class FlightController extends Controller
 {
     protected $apiService;
@@ -590,6 +591,7 @@ class FlightController extends Controller
     }
 
 
+   
     public function genrateTickBook(Request $request)
     {
         try {
@@ -601,8 +603,6 @@ class FlightController extends Controller
                 'Passengers' => 'required|array',
                 'email' => 'required|email',
                 'user_id' => 'required',
-
-
                 'Passengers.*.Title' => 'required|string',
                 'Passengers.*.FirstName' => 'required|string',
                 'Passengers.*.LastName' => 'required|string',
@@ -711,7 +711,7 @@ class FlightController extends Controller
                         'message' => 'This booking has already been processed with the same details.',
                         'error' => $errorMessage,
                         'action' => 'Please check your booking history or start a new search.',
-                        'pnr' => preg_match('/PNR (\w+)/', $errorMessage, $matches) ? $matches[1] : null, // Extract PNR if present
+                        'pnr' => preg_match('/PNR (\w+)/', $errorMessage, $matches) ? $matches[1] : null,
                     ], 400);
                 }
 
@@ -726,7 +726,6 @@ class FlightController extends Controller
                 'trace_id' => $validatedData['TraceId'],
                 'user_ip' => $validatedData['EndUserIp'],
                 'user_id' => $validatedData['user_id'],
-
                 'pnr' => $bookingResponse['PNR'],
                 'booking_id' => $bookingResponse['BookingId'],
                 'username' => $validatedData['email'],
@@ -734,10 +733,38 @@ class FlightController extends Controller
                 'phone_number' => $validatedData['Passengers'][0]['ContactNo'],
             ]);
 
+            // Prepare data for email
+            $bookingData = [
+                'PNR' => $bookingResponse['PNR'],
+                'BookingId' => $bookingResponse['BookingId'],
+                'Origin' => $bookingResponse['FlightItinerary']['Origin'],
+                'Destination' => $bookingResponse['FlightItinerary']['Destination'],
+                'AirlineCode' => $bookingResponse['FlightItinerary']['AirlineCode'],
+                'AirlineName' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['AirlineName'],
+                'FlightNumber' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['FlightNumber'],
+                'DepTime' => $bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'],
+                'ArrTime' => $bookingResponse['FlightItinerary']['Segments'][0]['Destination']['ArrTime'],
+            ];
+
+            $passengerData = $bookingResponse['FlightItinerary']['Passenger'];
+
+            $invoiceData = [
+                'InvoiceNo' => $bookingResponse['FlightItinerary']['InvoiceNo'],
+                'InvoiceAmount' => $bookingResponse['FlightItinerary']['InvoiceAmount'],
+                'InvoiceCreatedOn' => $bookingResponse['FlightItinerary']['InvoiceCreatedOn'],
+                'Currency' => $bookingResponse['FlightItinerary']['Fare']['Currency'],
+                'BaseFare' => $bookingResponse['FlightItinerary']['Fare']['BaseFare'],
+                'Tax' => $bookingResponse['FlightItinerary']['Fare']['Tax'],
+                'OtherCharges' => $bookingResponse['FlightItinerary']['Fare']['OtherCharges'],
+            ];
+
+            // Send email
+            Mail::to($validatedData['email'])->send(new BookingConfirmationMail($bookingData, $passengerData, $invoiceData));
+
             return response()->json([
                 'status' => 'success',
                 'data' => $response->json(),
-                'message' => 'Booking created successfully',
+                'message' => 'Booking created successfully and confirmation email sent',
             ], 200);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -753,7 +780,7 @@ class FlightController extends Controller
                 'error' => $e->getMessage(),
             ], 503);
         } catch (\Exception $e) {
-            \Log::error('Booking Error: ' . $e->getMessage(), [
+            Log::error('Booking Error: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
                 'request' => $request->all(),
             ]);

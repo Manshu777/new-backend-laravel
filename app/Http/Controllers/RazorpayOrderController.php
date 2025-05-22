@@ -32,7 +32,7 @@ class RazorpayOrderController extends Controller
 
             // Create Razorpay order
             $orderData = [
-                'amount' => $request->amount, // Amount in paise
+                'amount' => intval(round($request->amount * 100)),
                 'currency' => $request->currency,
                 'receipt' => $request->receipt,
                 'payment_capture' => 1, // Auto-capture payment
