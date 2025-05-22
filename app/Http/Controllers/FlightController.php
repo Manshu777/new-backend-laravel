@@ -16,6 +16,8 @@ use App\Models\RazorpayOrder;
 
 use App\Mail\BookingConfirmationMail;
 use Illuminate\Support\Facades\Log;
+
+
 class FlightController extends Controller
 {
     protected $apiService;
@@ -241,7 +243,7 @@ class FlightController extends Controller
             $bookingResponse = $response->json('Response.Response');
     
            
-            FlightBooking::create([
+            Bookflights::create([
                 'token' => $token,
                 'trace_id' => $validatedData['TraceId'],
                 'user_ip' => $validatedData['EndUserIp'],
@@ -424,7 +426,7 @@ class FlightController extends Controller
                 $bookingResponse = $response->json('Response.Response');
 
                 // Store booking details
-                FlightBooking::create([
+                Bookflights::create([
                     'token' => $token,
                     'trace_id' => $validatedData['TraceId'],
                     'user_ip' => $validatedData['EndUserIp'],
