@@ -156,8 +156,8 @@ class FlightController extends Controller
             'Passengers.*.PaxType' => 'required|integer',
             'Passengers.*.DateOfBirth' => 'required|date',
             'Passengers.*.Gender' => 'required|integer',
-            'Passengers.*.PassportNo' => 'string',
-            'Passengers.*.PassportExpiry' => 'date',
+              'Passengers.*.PassportNo' => 'nullable|string', 
+            'Passengers.*.PassportExpiry' => 'nullable|date',
             'Passengers.*.AddressLine1' => 'required|string',
             'Passengers.*.City' => 'required|string',
             'Passengers.*.CountryCode' => 'required|string',
@@ -330,8 +330,8 @@ class FlightController extends Controller
             'Passengers.*.PaxType' => 'required|integer|in:1,2,3', // Adult, Child, Infant
             'Passengers.*.DateOfBirth' => 'required|date|before:today',
             'Passengers.*.Gender' => 'required|integer|in:1,2', // Male, Female
-            'Passengers.*.PassportNo' => 'required|string|max:20|regex:/^[a-zA-Z0-9]+$/', // Sanitized
-            'Passengers.*.PassportExpiry' => 'required|date|after:today',
+           'Passengers.*.PassportNo' => 'nullable|string', 
+            'Passengers.*.PassportExpiry' => 'nullable|date',
             'Passengers.*.AddressLine1' => 'required|string|max:100',
             'Passengers.*.City' => 'required|string|max:50|regex:/^[a-zA-Z\s]+$/', // Sanitized
             'Passengers.*.CountryCode' => 'required|string|size:2', // ISO country code
@@ -623,8 +623,8 @@ class FlightController extends Controller
                 'Passengers.*.PaxType' => 'required|integer',
                 'Passengers.*.DateOfBirth' => 'required|date',
                 'Passengers.*.Gender' => 'required|integer',
-                'Passengers.*.PassportNo' => 'string',
-                'Passengers.*.PassportExpiry' => 'date',
+               'Passengers.*.PassportNo' => 'nullable|string', 
+            'Passengers.*.PassportExpiry' => 'nullable|date',
                 'Passengers.*.AddressLine1' => 'required|string',
                 'Passengers.*.City' => 'required|string',
                 'Passengers.*.CountryCode' => 'required|string',
@@ -735,29 +735,29 @@ class FlightController extends Controller
             $bookingResponse = $response->json('Response.Response');
 
             // Store booking details
-           Bookflights::create([
-    'token' => $token,
-    'trace_id' => $validatedData['TraceId'],
-    'user_ip' => $validatedData['EndUserIp'],
-    'user_id' => $validatedData['user_id'],
-    'pnr' => $bookingResponse['PNR'],
-    'booking_id' => $bookingResponse['BookingId'],
-    'flight_name' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['AirlineName'],
-    'departure_from' => $bookingResponse['FlightItinerary']['Origin'],
-    'arrival_to' => $bookingResponse['FlightItinerary']['Destination'],
-    'flight_date' => \Carbon\Carbon::parse($bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'])->toDateString(),
-    'date_of_booking' => now(),
+                Bookflights::create([
+            'token' => $token,
+            'trace_id' => $validatedData['TraceId'],
+            'user_ip' => $validatedData['EndUserIp'],
+            'user_id' => $validatedData['user_id'],
+            'pnr' => $bookingResponse['PNR'],
+            'booking_id' => $bookingResponse['BookingId'],
+            'flight_name' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['AirlineName'],
+            'departure_from' => $bookingResponse['FlightItinerary']['Origin'],
+            'arrival_to' => $bookingResponse['FlightItinerary']['Destination'],
+            'flight_date' => \Carbon\Carbon::parse($bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'])->toDateString(),
+            'date_of_booking' => now(),
 
-    'username' => $validatedData['email'],
-    'user_name' => $validatedData['Passengers'][0]['FirstName'] . ' ' . $validatedData['Passengers'][0]['LastName'],
-    'phone_number' => $validatedData['Passengers'][0]['ContactNo'],
-    'airline_code' => $bookingResponse['FlightItinerary']['AirlineCode'],
-    'flight_number' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['FlightNumber'],
-    'departure_time' => $bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'],
-    'arrival_time' => $bookingResponse['FlightItinerary']['Segments'][0]['Destination']['ArrTime'],
-    'duration' => $bookingResponse['FlightItinerary']['Segments'][0]['Duration'],
+            'username' => $validatedData['email'],
+            'user_name' => $validatedData['Passengers'][0]['FirstName'] . ' ' . $validatedData['Passengers'][0]['LastName'],
+            'phone_number' => $validatedData['Passengers'][0]['ContactNo'],
+            'airline_code' => $bookingResponse['FlightItinerary']['AirlineCode'],
+            'flight_number' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['FlightNumber'],
+            'departure_time' => $bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'],
+            'arrival_time' => $bookingResponse['FlightItinerary']['Segments'][0]['Destination']['ArrTime'],
+            'duration' => $bookingResponse['FlightItinerary']['Segments'][0]['Duration'],
 
-]);
+       ]);
             // Prepare data for email
             $bookingData = [
                 'PNR' => $bookingResponse['PNR'],
