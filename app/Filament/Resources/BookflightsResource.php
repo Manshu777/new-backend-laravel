@@ -71,7 +71,8 @@ class BookflightsResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('user_name')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('user_number')
+              Tables\Columns\TextColumn::make('pnr')->label('PNR Number'),
+                Tables\Columns\TextColumn::make('phone_number')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('flight_name')
                     ->searchable(),
@@ -87,10 +88,8 @@ class BookflightsResource extends Resource
                 Tables\Columns\TextColumn::make('date_of_booking')
                     ->dateTime()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('return_date')
-                    ->dateTime()
-                    ->sortable(),
-                Tables\Columns\IconColumn::make('refund')
+           
+                Tables\Columns\IconColumn::make('ticket_status')
                     ->boolean(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
