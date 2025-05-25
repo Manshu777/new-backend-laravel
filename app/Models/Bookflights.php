@@ -43,7 +43,17 @@ class Bookflights extends Model
         'booking_id',
         'username',
         'phone_number',
+        'pdf_path',
+'ticket_status',
+'airline_code',
+'departure_time',
+'arrival_time',
+'duration',
+'fare',
+'currency',
+
     ];
+    
 
     /**
      * The attributes that should be cast to native types.
