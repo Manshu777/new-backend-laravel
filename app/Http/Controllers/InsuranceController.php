@@ -73,7 +73,7 @@ class InsuranceController extends Controller
         $validated["TokenId"] = $token;
 
         // Define API endpoint
-        $apiUrl = "https://booking.travelboutiqueonline.com/InsuranceAPI_V1/InsuranceService.svc/rest/Search";
+        $apiUrl = "https://api.travelboutiqueonline.com/InsuranceAPI_V1/InsuranceService.svc/rest/Search";
 
         // Send request to TekTravels API
         $response = Http::post($apiUrl, $validated);
