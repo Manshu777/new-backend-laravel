@@ -121,9 +121,9 @@ class BusControllerSearch extends Controller
             "EndUserIp" => $validatedData['EndUserIp'],  // Use validated IP
             "TokenId" => $token,  // Use the token from the service
         ];
-
+//https://BusBE.tektravels.com/Busservice.svc/rest/GetBoardingPointDetails
         $buslayout = Http::timeout(100)->withHeaders([])->post('https://api.travelboutiqueonline.com/BusAPI_V10/BusService.svc/rest/GetBusSeatLayOut', $searchPayload);
-        $busBOARDING = Http::timeout(100)->withHeaders([])->post('https://api.travelboutiqueonline.com/BusAPI_V10/BusService.svc/rest/GetBookingDetail', $searchPayload);
+        $busBOARDING = Http::timeout(100)->withHeaders([])->post('https://api.travelboutiqueonline.com/BusAPI_V10/BusService.svc/rest/GetBoardingPointDetails', $searchPayload);
 
         
         if ($buslayout->json('Response.Error.ErrorCode') === 6) {
