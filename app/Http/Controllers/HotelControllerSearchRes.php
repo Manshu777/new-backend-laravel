@@ -10,7 +10,9 @@ use Illuminate\Support\Facades\Http;
 use App\Models\HotelData;
 use Carbon\Carbon;
 
-
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\HotelBookingConfirmation;
 class HotelControllerSearchRes extends Controller
 {
    public function searchHotels(Request $request)
@@ -241,34 +243,134 @@ class HotelControllerSearchRes extends Controller
     }
 
 
-    public function bookHotel(Request $request)
-{
-    $validated = $request->validate([
-        'BookingCode' => 'required',
-        'IsVoucherBooking' => 'required|boolean',
-        'GuestNationality' => 'required|string',
-        'EndUserIp' => 'required|ip',
-        'RequestedBookingMode' => 'required|integer',
-        'NetAmount' => 'required|numeric',
-        'HotelRoomsDetails' => 'required|array',
-    ]);
-
-    // Send booking request without authentication
-    $response = Http::withBasicAuth('Apkatrip', 'Apkatrip@1234')
-            ->post('https://HotelBE.tektravels.com/hotelservice.svc/rest/book', [
-                "BookingCode" => $validated['BookingCode'],
-                "IsVoucherBooking" => $validated['IsVoucherBooking'],
-                "GuestNationality" => $validated['GuestNationality'],
-                "EndUserIp" => $validated['EndUserIp'],
-                "RequestedBookingMode" => $validated['RequestedBookingMode'],
-                "NetAmount" => $validated['NetAmount'],
-                "HotelRoomsDetails" => $validated['HotelRoomsDetails']
+  public function bookHotel(Request $request)
+    {
+        try {
+            // Validate the incoming request
+            $validated = $request->validate([
+                'BookingCode' => 'required|string',
+                'IsVoucherBooking' => 'required|boolean',
+                'GuestNationality' => 'required|string|size:2',
+                'EndUserIp' => 'required|ip',
+                'RequestedBookingMode' => 'required|integer|min:1',
+                'NetAmount' => 'required|numeric|min:0',
+                'HotelRoomsDetails' => 'required|array|min:1',
+                'HotelRoomsDetails.*.HotelPassenger' => 'required|array|min:1',
+                'HotelRoomsDetails.*.HotelPassenger.*.Title' => 'required|string|in:Mr.,Mrs.,Miss.,Master.',
+                'HotelRoomsDetails.*.HotelPassenger.*.FirstName' => 'required|string|max:255',
+                'HotelRoomsDetails.*.HotelPassenger.*.MiddleName' => 'nullable|string|max:255',
+                'HotelRoomsDetails.*.HotelPassenger.*.LastName' => 'required|string|max:255',
+                'HotelRoomsDetails.*.HotelPassenger.*.Email' => 'required|email|max:255',
+                'HotelRoomsDetails.*.HotelPassenger.*.PaxType' => 'required|integer|in:1,2',
+                'HotelRoomsDetails.*.HotelPassenger.*.LeadPassenger' => 'required|boolean',
+                'HotelRoomsDetails.*.HotelPassenger.*.Age' => 'required|integer|min:0',
+                'HotelRoomsDetails.*.HotelPassenger.*.Phoneno' => 'required|numeric|digits_between:10,15',
+                'HotelRoomsDetails.*.HotelPassenger.*.PassportNo' => 'nullable|string|max:50',
+                'HotelRoomsDetails.*.HotelPassenger.*.PassportIssueDate' => 'nullable|date',
+                'HotelRoomsDetails.*.HotelPassenger.*.PassportExpDate' => 'nullable|date|after:PassportIssueDate',
+                'HotelRoomsDetails.*.HotelPassenger.*.PaxId' => 'nullable|integer|min:0',
+                'HotelRoomsDetails.*.HotelPassenger.*.PAN' => 'nullable|string|regex:/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/',
+                'HotelRoomsDetails.*.HotelPassenger.*.RoomIndex' => 'nullable|integer|min:1',
+                'HotelRoomsDetails.*.HotelPassenger.*.GSTCompanyAddress' => 'nullable|string|max:255',
+                'HotelRoomsDetails.*.HotelPassenger.*.GSTCompanyContactNumber' => 'nullable|numeric|digits_between:10,15',
+                'HotelRoomsDetails.*.HotelPassenger.*.GSTCompanyName' => 'nullable|string|max:255',
+                'HotelRoomsDetails.*.HotelPassenger.*.GSTNumber' => 'nullable|string|max:50',
+                'HotelRoomsDetails.*.HotelPassenger.*.GSTCompanyEmail' => 'nullable|email|max:255',
+                'ArrivalTransport' => 'nullable',
+                'TraceId' => 'nullable|string|max:255',
             ]);
-    // Decode the API response
-    $responseData = json_decode($response->body(), true);
 
-    return response()->json($responseData);
-}
+            // Prepare the payload
+            $payload = [
+                'BookingCode' => $validated['BookingCode'],
+                'IsVoucherBooking' => $validated['IsVoucherBooking'],
+                'GuestNationality' => $validated['GuestNationality'],
+                'EndUserIp' => $validated['EndUserIp'],
+                'RequestedBookingMode' => $validated['RequestedBookingMode'],
+                'NetAmount' => $validated['NetAmount'],
+                'HotelRoomsDetails' => $validated['HotelRoomsDetails'],
+                'IsPackageFare' => $validated['IsPackageFare'] ?? false,
+                'IsPackageDetailsMandatory' => $validated['IsPackageDetailsMandatory'] ?? false,
+                'ArrivalTransport' => $validated['ArrivalTransport'] ?? null,
+                'TraceId' => $validated['TraceId'] ?? null,
+            ];
+
+            // Make the HTTP request
+            $response = Http::withBasicAuth('Apkatrip', 'Apkatrip@1234')
+                ->timeout(30)
+                ->post('https://HotelBE.tektravels.com/hotelservice.svc/rest/book', $payload);
+
+            // Check if the response is successful
+            if ($response->failed()) {
+                throw new \Exception('API request failed with status code: ' . $response->status());
+            }
+
+            // Decode the response
+            $responseData = json_decode($response->body(), true);
+
+            // Check if JSON decoding was successful
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new \Exception('Failed to parse API response: ' . json_last_error_msg());
+            }
+
+            // Check if the API returned an error in the response data
+            if (isset($responseData['Error']) || isset($responseData['error'])) {
+                $errorMessage = $responseData['Error'] ?? $responseData['error'] ?? 'Unknown API error';
+                throw new \Exception('API error: ' . $errorMessage);
+            }
+
+            // Prepare booking details for email and PDF
+            $bookingDetails = array_merge($payload, $responseData['BookResult']);
+
+            // Generate PDF
+            $pdf = PDF::loadView('pdf.booking_confirmationhotel', ['bookingDetails' => $bookingDetails]);
+            $pdfPath = storage_path('app/public/booking_confirmation_' . $bookingDetails['BookingId'] . '.pdf');
+            $pdf->save($pdfPath);
+
+            // Find lead passenger's email
+            $leadPassengerEmail = null;
+            foreach ($bookingDetails['HotelRoomsDetails'] as $room) {
+                foreach ($room['HotelPassenger'] as $passenger) {
+                    if ($passenger['LeadPassenger']) {
+                        $leadPassengerEmail = $passenger['Email'];
+                        break 2;
+                    }
+                }
+            }
+
+            // Send email with PDF attachment
+            if ($leadPassengerEmail) {
+                Mail::to($leadPassengerEmail)->send(new HotelBookingConfirmation($bookingDetails, $pdfPath));
+                unlink($pdfPath);
+            } else {
+                \Log::warning('No lead passenger email found for booking ID: ' . $bookingDetails['BookingId']);
+            }
+
+            // Return successful response
+            return response()->json([
+                'status' => 'success',
+                'data' => $responseData
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to connect to the hotel booking service: ' . $e->getMessage()
+            ], 503);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An error occurred while processing the booking: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
 
 
 
