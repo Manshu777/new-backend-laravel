@@ -22,7 +22,7 @@ use App\Http\Controllers\TicketBookingController;
 use App\Http\Controllers\RazorpayOrderController;
 
 
-
+    
 use App\Http\Controllers\ApiController;
 use App\Http\Controllers\ImageController;
 
