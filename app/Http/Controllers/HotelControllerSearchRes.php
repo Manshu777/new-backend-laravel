@@ -9,13 +9,14 @@ use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Http;
 use App\Models\HotelData;
 use Carbon\Carbon;
-
+use App\Models\TBOHotelCode;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\HotelBookingConfirmation;
 class HotelControllerSearchRes extends Controller
 {
-   public function searchHotels(Request $request)
+
+     public function searchHotels(Request $request)
 {
     $validated = $request->validate([
         'cityCode' => 'required|string',
@@ -28,7 +29,7 @@ class HotelControllerSearchRes extends Controller
 
     $hotelresult = [];
 
-    // Check database for valid data (within 15 days)
+    // Check database for valid hotel data (within 15 days)
     $dbHotels = HotelData::where('city_code', $validated['cityCode'])
         ->where('created_at', '>=', Carbon::now()->subDays(15))
         ->get();
@@ -46,20 +47,60 @@ class HotelControllerSearchRes extends Controller
         ]);
     }
 
-    // No valid data in database, fetch from API
-    $client = new Client();
+    // Check TBOHotelCode table for valid hotel codes (within 15 days)
+    $dbHotelCodes = TBOHotelCode::where('city_code', $validated['cityCode'])
+        ->where('created_at', '>=', Carbon::now()->subDays(15))
+        ->get();
 
-    // Fetch hotel codes
-    $response1 = $client->post('http://api.tbotechnology.in/TBOHolidays_HotelAPI/TBOHotelCodeList', [
-        'auth' => ['TBOStaticAPITest', 'Tbo@11530818'],
-        'json' => [
-            "CityCode" => $validated['cityCode'],
-            "IsDetailedResponse" => false,
-        ]
-    ]);
+    $hotelCodes = [];
+    if ($dbHotelCodes->isNotEmpty()) {
+        $hotelCodes = $dbHotelCodes->pluck('hotel_code')->toArray();
+    } else {
+        // No valid data in TBOHotelCode, fetch from API
+        $client = new Client();
 
-    $hotelData = json_decode($response1->getBody()->getContents(), true);
-    $hotelCodes = array_column($hotelData['Hotels'], 'HotelCode');
+        // Fetch hotel codes
+        $response1 = $client->post('http://api.tbotechnology.in/TBOHolidays_HotelAPI/TBOHotelCodeList', [
+            'auth' => ['TBOStaticAPITest', 'Tbo@11530818'],
+            'json' => [
+                "CityCode" => $validated['cityCode'],
+                "IsDetailedResponse" => true, // Set to true to get detailed hotel info
+            ]
+        ]);
+
+        $hotelData = json_decode($response1->getBody()->getContents(), true);
+        $hotels = $hotelData['Hotels'] ?? [];
+
+        if (empty($hotels)) {
+            return response()->json([
+                'message' => 'No hotels available',
+                'totalHotels' => [],
+            ]);
+        }
+
+        // Save hotel codes to TBOHotelCode table
+        foreach ($hotels as $hotel) {
+            TBOHotelCode::updateOrCreate(
+                [
+                    'hotel_code' => $hotel['HotelCode'],
+                    'city_code' => $validated['cityCode'],
+                ],
+                [
+                    'hotel_name' => $hotel['HotelName'] ?? null,
+                    'latitude' => $hotel['Latitude'] ?? null,
+                    'longitude' => $hotel['Longitude'] ?? null,
+                    'hotel_rating' => $hotel['StarRating'] ?? null,
+                    'address' => $hotel['Address'] ?? null,
+                    'country_name' => $hotel['CountryName'] ?? null,
+                    'country_code' => $hotel['CountryCode'] ?? null,
+                    'city_name' => $hotel['CityName'] ?? null,
+                ]
+            );
+        }
+
+        $hotelCodes = array_column($hotels, 'HotelCode');
+    }
+
     $hotelCodes = array_slice($hotelCodes, 0, 100); // Limit to 100 hotel codes
 
     if (empty($hotelCodes)) {
@@ -70,8 +111,9 @@ class HotelControllerSearchRes extends Controller
     }
 
     // Process all hotels
+    $client = new Client();
     foreach ($hotelCodes as $hotelCode) {
-        // Check if hotel data exists in DB and is valid
+        // Check if hotel data exists in HotelData and is valid
         $existingHotel = HotelData::where('hotel_code', $hotelCode)
             ->where('city_code', $validated['cityCode'])
             ->where('created_at', '>=', Carbon::now()->subDays(15))
@@ -85,7 +127,7 @@ class HotelControllerSearchRes extends Controller
             continue;
         }
 
-
+        // Fetch search results
         $response3 = $client->post('https://affiliate.tektravels.com/HotelAPI/Search', [
             'auth' => ['Apkatrip', 'Apkatrip@1234'],
             'json' => [
@@ -115,10 +157,9 @@ class HotelControllerSearchRes extends Controller
 
         $searchResults = json_decode($response3->getBody()->getContents(), true);
 
-
         $hasAvailableRooms = !($searchResults['Status']['Code'] === 201 && $searchResults['Status']['Description'] === "No Available rooms for given criteria");
 
-
+        // Fetch hotel details
         $response2 = $client->post('http://api.tbotechnology.in/TBOHolidays_HotelAPI/Hoteldetails', [
             'auth' => ['TBOStaticAPITest', 'Tbo@11530818'],
             'json' => [
@@ -161,6 +202,7 @@ class HotelControllerSearchRes extends Controller
         'totalHotels' => $hotelresult,
     ]);
 }
+ 
  
 
 
