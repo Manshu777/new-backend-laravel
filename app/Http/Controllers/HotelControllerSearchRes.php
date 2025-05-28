@@ -146,7 +146,7 @@ class HotelControllerSearchRes extends Controller
                 "IsDetailedResponse" => true,
                 "Filters" => [
                     "Refundable" => false,
-                    "NoOfRooms" => 1,
+                    "NoOfRooms" => 0,
                     "MealType" => 0,
                     "OrderBy" => 0,
                     "StarRating" => 0,
