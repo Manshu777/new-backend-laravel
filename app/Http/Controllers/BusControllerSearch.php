@@ -46,7 +46,7 @@ class BusControllerSearch extends Controller
         ];
 
 
-        $response = Http::timeout(100)->withHeaders([])->post('https://api.travelboutiqueonline.com/BusAPI_V10/BusService.svc/rest/Search', $searchPayload);
+        $response = Http::timeout(100)->withHeaders([])->post('https://BusBE.tektravels.com/Busservice.svc/rest/Search', $searchPayload);
 
 
         if ($response->json('Response.Error.ErrorCode') === 6) {
@@ -55,7 +55,7 @@ class BusControllerSearch extends Controller
             $searchPayload['TokenId'] = $token;
 
 
-            $response = Http::timeout(90)->withHeaders([])->post('https://api.travelboutiqueonline.com/BusAPI_V10/BusService.svc/rest/Search', $searchPayload);
+            $response = Http::timeout(90)->withHeaders([])->post('https://BusBE.tektravels.com/Busservice.svc/rest/Search', $searchPayload);
         }
 
 
@@ -87,7 +87,7 @@ class BusControllerSearch extends Controller
     
         $response = Http::timeout(60)
             ->withHeaders(['Content-Type' => 'application/json'])
-            ->post('https://api.travelboutiqueonline.com/BusAPI_V10/BusService.svc/rest/Block', $payload);
+            ->post('https://BusBE.tektravels.com/Busservice.svc/rest/Block', $payload);
     
         if ($response->json('BlockResult.Error.ErrorCode') === 6) {
             // Re-authenticate
@@ -97,7 +97,7 @@ class BusControllerSearch extends Controller
             // Retry request
             $response = Http::timeout(60)
                 ->withHeaders(['Content-Type' => 'application/json'])
-                ->post('https://api.travelboutiqueonline.com/BusAPI_V10/BusService.svc/rest/Block', $payload);
+                ->post('https://BusBE.tektravels.com/Busservice.svc/rest/Block', $payload);
         }
     
         return $response->json();
@@ -122,8 +122,8 @@ class BusControllerSearch extends Controller
             "TokenId" => $token,  // Use the token from the service
         ];
 //https://BusBE.tektravels.com/Busservice.svc/rest/GetBoardingPointDetails
-        $buslayout = Http::timeout(100)->withHeaders([])->post('https://api.travelboutiqueonline.com/BusAPI_V10/BusService.svc/rest/GetBusSeatLayOut', $searchPayload);
-        $busBOARDING = Http::timeout(100)->withHeaders([])->post('https://api.travelboutiqueonline.com/BusAPI_V10/BusService.svc/rest/GetBoardingPointDetails', $searchPayload);
+        $buslayout = Http::timeout(100)->withHeaders([])->post('https://BusBE.tektravels.com/Busservice.svc/rest/GetBusSeatLayOut', $searchPayload);
+        $busBOARDING = Http::timeout(100)->withHeaders([])->post('https://BusBE.tektravels.com/Busservice.svc/rest/GetBoardingPointDetails', $searchPayload);
 
         
         if ($buslayout->json('Response.Error.ErrorCode') === 6) {
@@ -132,8 +132,8 @@ class BusControllerSearch extends Controller
             $searchPayload['TokenId'] = $token;
 
             // Retry the API request with the new token
-            $buslayout = Http::timeout(90)->withHeaders([])->post('https://api.travelboutiqueonline.com/BusAPI_V10/BusService.svc/rest/GetBusSeatLayOut', $searchPayload);
-            $busBOARDING = Http::timeout(100)->withHeaders([])->post('https://api.travelboutiqueonline.com/BusAPI_V10/BusService.svc/rest/GetBookingDetail', $searchPayload);
+            $buslayout = Http::timeout(90)->withHeaders([])->post('https://BusBE.tektravels.com/Busservice.svc/rest/GetBusSeatLayOut', $searchPayload);
+            $busBOARDING = Http::timeout(100)->withHeaders([])->post('https://BusBE.tektravels.com/Busservice.svc/rest/GetBoardingPointDetails', $searchPayload);
 
         }
         // return $searchPayload;
@@ -228,7 +228,7 @@ public function bookbus(Request $request)
             }, $validatedData['passenger']),
         ];
 
-        $bookbus = Http::timeout(90)->post('https://api.travelboutiqueonline.com/BusAPI_V10/BusService.svc/rest/Book', $searchData);
+        $bookbus = Http::timeout(90)->post('https://BusBE.tektravels.com/Busservice.svc/rest/Book', $searchData);
 
         Log::info('Book Bus API Response:', $bookbus->json());
 
@@ -238,7 +238,7 @@ public function bookbus(Request $request)
         if ($errorCode === 6) {
             $token = $this->apiService->authenticate();
             $searchData['TokenId'] = $token;
-            $bookbus = Http::timeout(90)->post('https://api.travelboutiqueonline.com/BusAPI_V10/BusService.svc/rest/Book', $searchData);
+            $bookbus = Http::timeout(90)->post('https://BusBE.tektravels.com/Busservice.svc/rest/Book', $searchData);
             $errorCode = data_get($bookbus->json(), 'BookResult.Error.ErrorCode');
             $errorMessage = data_get($bookbus->json(), 'BookResult.Error.ErrorMessage');
         }

@@ -31,13 +31,13 @@ class BusController extends Controller
     ];
 
     $response = Http::timeout(100)
-        ->post('https://api.travelboutiqueonline.com/SharedAPI/StaticData.svc/rest/GetBusCityList', $searchPayload);
+        ->post('https://Sharedapi.tektravels.com/StaticData.svc/rest/GetBusCityList', $searchPayload);
 
     if ($response->json('Response.Error.ErrorCode') === 6) {
         $token = $this->apiService->authenticate();
         $searchPayload['TokenId'] = $token;
         $response = Http::timeout(90)
-            ->post('https://api.travelboutiqueonline.com/SharedAPI/StaticData.svc/rest/GetBusCityList', $searchPayload);
+            ->post('https://Sharedapi.tektravels.com/StaticData.svc/rest/GetBusCityList', $searchPayload);
     }
 
     $busCities = $response->json('BusCities') ?? [];
