@@ -19,7 +19,6 @@ class AirportController extends Controller
 
         } else {
 
-
             $res = Airport::where('popular', 1)->orWhere('name', 'jonty')
                 ->get(); 
         }
