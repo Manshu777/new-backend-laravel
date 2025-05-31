@@ -111,7 +111,9 @@
         }
     </style>
 </head>
-<body>
+
+
+ <body>
     <div class="container">
         <div class="header">
             <!-- Replace with your logo URL -->
@@ -126,14 +128,21 @@
                 <p><strong>Booking ID:</strong> {{ $bookingData['BookingId'] ?? 'N/A' }}</p>
                 <p><strong>Origin:</strong> {{ $bookingData['Origin'] ?? 'N/A' }}</p>
                 <p><strong>Destination:</strong> {{ $bookingData['Destination'] ?? 'N/A' }}</p>
-                <p><strong>Airline:</strong> {{ $bookingData['AirlineCode'] ?? 'N/A' }} - {{ $bookingData['AirlineName'] ?? 'N/A' }}</p>
-                <p><strong>Flight Number:</strong> {{ $bookingData['FlightNumber'] ?? 'N/A' }}</p>
-                <p><strong>Departure:</strong> {{ isset($bookingData['DepTime']) ? \Carbon\Carbon::parse($bookingData['DepTime'])->format('M d, Y H:i') : 'N/A' }}</p>
-                <p><strong>Arrival:</strong> {{ isset($bookingData['ArrTime']) ? \Carbon\Carbon::parse($bookingData['ArrTime'])->format('M d, Y H:i') : 'N/A' }}</p>
             </div>
+            @foreach ($bookingData['Segments'] as $index => $segment)
+                <div class="segment">
+                    <h3>Flight Segment {{ $index + 1 }}</h3>
+                    <div class="info-grid">
+                        <p><strong>Airline:</strong> {{ $segment['Airline']['AirlineCode'] ?? 'N/A' }} - {{ $segment['Airline']['AirlineName'] ?? 'N/A' }}</p>
+                        <p><strong>Flight Number:</strong> {{ $segment['Airline']['FlightNumber'] ?? 'N/A' }}</p>
+                        <p><strong>Departure:</strong> {{ isset($segment['Origin']['DepTime']) ? \Carbon\Carbon::parse($segment['Origin']['DepTime'])->format('M d, Y H:i') : 'N/A' }}</p>
+                        <p><strong>Arrival:</strong> {{ isset($segment['Destination']['ArrTime']) ? \Carbon\Carbon::parse($segment['Destination']['ArrTime'])->format('M d, Y H:i') : 'N/A' }}</p>
+                        <p><strong>Duration:</strong> {{ isset($segment['Duration']) ? floor($segment['Duration'] / 60) . 'h ' . ($segment['Duration'] % 60) . 'm' : 'N/A' }}</p>
+                    </div>
+                </div>
+            @endforeach
             <div class="highlight">
-                <p><strong>Travel Date:</strong> {{ isset($bookingData['DepTime']) ? \Carbon\Carbon::parse($bookingData['DepTime'])->format('M d, Y') : 'N/A' }}</p>
-                <p><strong>Flight Duration:</strong> {{ isset($bookingData['DepTime']) && isset($bookingData['ArrTime']) ? \Carbon\Carbon::parse($bookingData['DepTime'])->diffForHumans(\Carbon\Carbon::parse($bookingData['ArrTime']), ['parts' => 2, 'join' => ' and ']) : 'N/A' }}</p>
+                <p><strong>Travel Date:</strong> {{ isset($bookingData['Segments'][0]['Origin']['DepTime']) ? \Carbon\Carbon::parse($bookingData['Segments'][0]['Origin']['DepTime'])->format('M d, Y') : 'N/A' }}</p>
             </div>
         </div>
 
@@ -174,6 +183,7 @@
             <div class="info-grid">
                 <p><strong>Invoice Number:</strong> {{ $invoiceData['InvoiceNo'] ?? 'N/A' }}</p>
                 <p><strong>Invoice Date:</strong> {{ isset($invoiceData['InvoiceCreatedOn']) ? \Carbon\Carbon::parse($invoiceData['InvoiceCreatedOn'])->format('M d, Y') : 'N/A' }}</p>
+                <p><strong>Commission Earned:</strong> {{ $invoiceData['Currency'] ?? 'USD' }} {{ number_format($invoiceData['CommissionEarned'] ?? 0, 2) }}</p>
             </div>
             <table class="table">
                 <thead>
@@ -195,6 +205,10 @@
                         <td>Other Charges</td>
                         <td>{{ $invoiceData['Currency'] ?? 'USD' }} {{ number_format($invoiceData['OtherCharges'] ?? 0, 2) }}</td>
                     </tr>
+                    <tr>
+                        <td>Commission Earned</td>
+                        <td>{{ $invoiceData['Currency'] ?? 'USD' }} {{ number_format($invoiceData['CommissionEarned'] ?? 0, 2) }}</td>
+                    </tr>
                     <tr class="total">
                         <td><strong>Total</strong></td>
                         <td><strong>{{ $invoiceData['Currency'] ?? 'USD' }} {{ number_format($invoiceData['InvoiceAmount'] ?? 0, 2) }}</strong></td>
@@ -204,9 +218,10 @@
         </div>
 
         <div class="footer">
-            <p>Thank you for choosing us! For support, contact <a href="mailto:support@yourtravelagency.com">support@yourtravelagency.com</a> or call +1-800-123-4567.</p>
+            <p>Thank you for choosing us! For support, contact <a href="mailto:info@nextgentrip.com">info@nextgentrip.com</a> or call +91-98775 79319.</p>
             <p>© {{ date('Y') }} Your Travel Agency. All rights reserved.</p>
         </div>
     </div>
 </body>
+
 </html>

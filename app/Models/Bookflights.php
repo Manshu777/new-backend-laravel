@@ -52,6 +52,9 @@ class Bookflights extends Model
 'fare',
 'currency',
 
+'commission_earned',
+        'segments',
+
     ];
     
 
@@ -65,6 +68,7 @@ class Bookflights extends Model
         'date_of_booking' => 'datetime',
         'return_date' => 'datetime',
         'refund' => 'boolean',
+        'segments' => 'array',
     ];
 
     /**

@@ -623,8 +623,8 @@ class FlightController extends Controller
                 'Passengers.*.PaxType' => 'required|integer',
                 'Passengers.*.DateOfBirth' => 'required|date',
                 'Passengers.*.Gender' => 'required|integer',
-               'Passengers.*.PassportNo' => 'nullable|string', 
-            'Passengers.*.PassportExpiry' => 'nullable|date',
+                 'Passengers.*.PassportNo' => 'nullable|string', 
+                 'Passengers.*.PassportExpiry' => 'nullable|date',
                 'Passengers.*.AddressLine1' => 'required|string',
                 'Passengers.*.City' => 'required|string',
                 'Passengers.*.CountryCode' => 'required|string',
@@ -734,57 +734,66 @@ class FlightController extends Controller
 
             $bookingResponse = $response->json('Response.Response');
 
-            // Store booking details
-                Bookflights::create([
+              Log::info('Booking Response', ['data' => $bookingResponse]);
+
+                // Store booking details
+        Bookflights::create([
             'token' => $token,
             'trace_id' => $validatedData['TraceId'],
             'user_ip' => $validatedData['EndUserIp'],
             'user_id' => $validatedData['user_id'],
-            'pnr' => $bookingResponse['PNR'],
-            'booking_id' => $bookingResponse['BookingId'],
-            'flight_name' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['AirlineName'],
-            'departure_from' => $bookingResponse['FlightItinerary']['Origin'],
-            'arrival_to' => $bookingResponse['FlightItinerary']['Destination'],
-            'flight_date' => \Carbon\Carbon::parse($bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'])->toDateString(),
+            'pnr' => $bookingResponse['PNR'] ?? null,
+            'booking_id' => $bookingResponse['BookingId'] ?? null,
+            'flight_name' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['AirlineName'] ?? null,
+            'departure_from' => $bookingResponse['FlightItinerary']['Origin'] ?? null,
+            'arrival_to' => $bookingResponse['FlightItinerary']['Destination'] ?? null,
+            'flight_date' => isset($bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'])
+                ? \Carbon\Carbon::parse($bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'])->toDateString()
+                : null,
             'date_of_booking' => now(),
-
             'username' => $validatedData['email'],
             'user_name' => $validatedData['Passengers'][0]['FirstName'] . ' ' . $validatedData['Passengers'][0]['LastName'],
             'phone_number' => $validatedData['Passengers'][0]['ContactNo'],
-            'airline_code' => $bookingResponse['FlightItinerary']['AirlineCode'],
-            'flight_number' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['FlightNumber'],
-            'departure_time' => $bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'],
-            'arrival_time' => $bookingResponse['FlightItinerary']['Segments'][0]['Destination']['ArrTime'],
-            'duration' => $bookingResponse['FlightItinerary']['Segments'][0]['Duration'],
+            'airline_code' => $bookingResponse['FlightItinerary']['AirlineCode'] ?? null,
+            'flight_number' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['FlightNumber'] ?? null,
+            'departure_time' => $bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'] ?? null,
+            'arrival_time' => $bookingResponse['FlightItinerary']['Segments'][0]['Destination']['ArrTime'] ?? null,
+            'duration' => $bookingResponse['FlightItinerary']['Segments'][0]['Duration'] ?? null,
+            'commission_earned' => $bookingResponse['FlightItinerary']['Fare']['CommissionEarned'] ?? 0.0,
+            'segments' => $bookingResponse['FlightItinerary']['Segments'] ?? [], // Store all segments as JSON
+        ]);
 
-       ]);
-            // Prepare data for email
-            $bookingData = [
-                'PNR' => $bookingResponse['PNR'],
-                'BookingId' => $bookingResponse['BookingId'],
-                'Origin' => $bookingResponse['FlightItinerary']['Origin'],
-                'Destination' => $bookingResponse['FlightItinerary']['Destination'],
-                'AirlineCode' => $bookingResponse['FlightItinerary']['AirlineCode'],
-                'AirlineName' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['AirlineName'],
-                'FlightNumber' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['FlightNumber'],
-                'DepTime' => $bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'],
-                'ArrTime' => $bookingResponse['FlightItinerary']['Segments'][0]['Destination']['ArrTime'],
-            ];
 
-            $passengerData = $bookingResponse['FlightItinerary']['Passenger'];
+        $bookingData = [
+            'PNR' => $bookingResponse['PNR'] ?? 'N/A',
+            'BookingId' => $bookingResponse['BookingId'] ?? 'N/A',
+            'Origin' => $bookingResponse['FlightItinerary']['Origin'] ?? 'N/A',
+            'Destination' => $bookingResponse['FlightItinerary']['Destination'] ?? 'N/A',
+            'AirlineCode' => $bookingResponse['FlightItinerary']['AirlineCode'] ?? 'N/A',
+            'AirlineName' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['AirlineName'] ?? 'N/A',
+            'FlightNumber' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['FlightNumber'] ?? 'N/A',
+            'DepTime' => $bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'] ?? 'N/A',
+            'ArrTime' => $bookingResponse['FlightItinerary']['Segments'][0]['Destination']['ArrTime'] ?? 'N/A',
+            'Segments' => $bookingResponse['FlightItinerary']['Segments'] ?? [], // Pass all segments to email
+        ];
 
-            $invoiceData = [
-                'InvoiceNo' => $bookingResponse['FlightItinerary']['InvoiceNo'],
-                'InvoiceAmount' => $bookingResponse['FlightItinerary']['InvoiceAmount'],
-                'InvoiceCreatedOn' => $bookingResponse['FlightItinerary']['InvoiceCreatedOn'],
-                'Currency' => $bookingResponse['FlightItinerary']['Fare']['Currency'],
-                'BaseFare' => $bookingResponse['FlightItinerary']['Fare']['BaseFare'],
-                'Tax' => $bookingResponse['FlightItinerary']['Fare']['Tax'],
-                'OtherCharges' => $bookingResponse['FlightItinerary']['Fare']['OtherCharges'],
-            ];
+        $passengerData = $bookingResponse['FlightItinerary']['Passenger'] ?? [];
 
-            // Send email
-            Mail::to($validatedData['email'])->send(new BookingConfirmationMail($bookingData, $passengerData, $invoiceData));
+        $invoiceData = [
+            'InvoiceNo' => $bookingResponse['FlightItinerary']['InvoiceNo'] ?? 'N/A',
+            'InvoiceAmount' => $bookingResponse['FlightItinerary']['InvoiceAmount'] ?? 0,
+            'InvoiceCreatedOn' => $bookingResponse['FlightItinerary']['InvoiceCreatedOn'] ?? 'N/A',
+            'Currency' => $bookingResponse['FlightItinerary']['Fare']['Currency'] ?? 'USD',
+            'BaseFare' => $bookingResponse['FlightItinerary']['Fare']['BaseFare'] ?? 0,
+            'Tax' => $bookingResponse['FlightItinerary']['Fare']['Tax'] ?? 0,
+            'OtherCharges' => $bookingResponse['FlightItinerary']['Fare']['OtherCharges'] ?? 0,
+            'CommissionEarned' => $bookingResponse['FlightItinerary']['Fare']['CommissionEarned'] ?? 0,
+        ];
+
+        // Send email
+        Mail::to($validatedData['email'])->send(new BookingConfirmationMail($bookingData, $passengerData, $invoiceData));
+
+        
 
             return response()->json([
                 'status' => 'success',
