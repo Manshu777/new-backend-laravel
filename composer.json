@@ -19,6 +19,7 @@
         "dotswan/filament-map-picker": "*",
         "ercogx/filament-openai-assistant": "^1.0",
         "filament/filament": "^3.2",
+        "google/cloud-dialogflow-cx": "^0.7.2",
         "guzzlehttp/guzzle": "^7.9",
         "ibrahim-bougaoua/filaprogress": "^0.1.0",
         "laravel/framework": "^11.9",

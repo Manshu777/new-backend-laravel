@@ -183,7 +183,7 @@
             <div class="info-grid">
                 <p><strong>Invoice Number:</strong> {{ $invoiceData['InvoiceNo'] ?? 'N/A' }}</p>
                 <p><strong>Invoice Date:</strong> {{ isset($invoiceData['InvoiceCreatedOn']) ? \Carbon\Carbon::parse($invoiceData['InvoiceCreatedOn'])->format('M d, Y') : 'N/A' }}</p>
-                <p><strong>Commission Earned:</strong> {{ $invoiceData['Currency'] ?? 'USD' }} {{ number_format($invoiceData['CommissionEarned'] ?? 0, 2) }}</p>
+                <!-- <p><strong>Commission Earned:</strong> {{ $invoiceData['Currency'] ?? 'USD' }} {{ number_format($invoiceData['CommissionEarned'] ?? 0, 2) }}</p> -->
             </div>
             <table class="table">
                 <thead>

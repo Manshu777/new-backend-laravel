@@ -18,63 +18,107 @@ class HotelRegesController extends Controller
 {
     //
 
- public function sendHotelOtp(Request $req){
-    $validated=$req->validate([
-        "phone"=>"required",
-        "email"=>"required"
-    ]);
- $allreadyhotel=Hotel::where("phone",$validated["phone"])->first();
-if($allreadyhotel){
-    return response()->json(["message"=>"Number allready exist","success"=>false]);
-}
-$allreadyemail=Hotel::where("email",$validated["email"])->first();
-if($allreadyemail){
-    return response()->json(["message"=>"Email allready exist","success"=>false]);
-}
-$otpsend = Http::post('https://otp-verify-service.onrender.com/send-otp', [
-    'phone' => $validated['phone'],
-]);
-
-return $otpsend;
-}
 
 
-public function  sendVerify(Request $req){
+
+
+public function sendHotelOtp(Request $req)
+{
     $validated = $req->validate([
-        'name'=>'required|string|max:25',
-        'phone'=>'required',
-        "otp"=> "required",
-        "email"=>"required",
-        'password'=>'required|min:6',
-         ]);
+        'phone' => 'required',
+        'email' => 'required|email',
+    ]);
+
+    // Check if phone already exists
+    $alreadyHotel = Hotel::where('phone', $validated['phone'])->first();
+    if ($alreadyHotel) {
+        return response()->json(['message' => 'Number already exists', 'success' => false], 400);
+    }
+
+    // Check if email already exists
+    $alreadyEmail = Hotel::where('email', $validated['email'])->first();
+    if ($alreadyEmail) {
+        return response()->json(['message' => 'Email already exists', 'success' => false], 400);
+    }
+
+    try {
+        // Initialize Twilio client
+        $twilio = new Client(config('services.twilio.account_sid'), config('services.twilio.auth_token'));
+
+        // Send OTP via Twilio Verify
+        $verification = $twilio->verify->v2->services(config('services.twilio.verify_service_sid'))
+            ->verifications
+            ->create($validated['phone'], 'sms'); // Send OTP via SMS
+
+        return response()->json([
+            'message' => 'OTP sent successfully',
+            'success' => true,
+            'status' => $verification->status, // Should be 'pending'
+        ], 200);
+    } catch (\Exception $e) {
+        return response()->json([
+            'message' => 'Failed to send OTP: ' . $e->getMessage(),
+            'success' => false,
+        ], 500);
+    }
+}
 
 
-         $otpsend = Http::post('https://otp-verify-service.onrender.com/verify-otp', [
-            'phone' => $validated['phone'],
-            "code"=>$validated["otp"]
-        ]);
-        if(!$otpsend["success"]){
-            return response()->json(["message"=>"Enter valid otp","success"=>false]);
+
+
+
+
+public function sendVerify(Request $req)
+{
+    $validated = $req->validate([
+        'name' => 'required|string|max:25',
+        'phone' => 'required',
+        'otp' => 'required',
+        'email' => 'required|email',
+        'password' => 'required|min:6',
+    ]);
+
+    try {
+        // Initialize Twilio client
+        $twilio = new Client(config('services.twilio.account_sid'), config('services.twilio.auth_token'));
+
+        // Verify OTP
+        $verificationCheck = $twilio->verify->v2->services(config('services.twilio.verify_service_sid'))
+            ->verificationChecks
+            ->create([
+                'to' => $validated['phone'],
+                'code' => $validated['otp'],
+            ]);
+
+        if ($verificationCheck->status !== 'approved') {
+            return response()->json(['message' => 'Invalid OTP', 'success' => false], 400);
         }
-        $datePart = date('Y-m-d'); 
 
-       
+        // OTP is valid, proceed with user creation
+        $datePart = date('Y-m-d');
         $slug = $datePart . '-' . $validated['name'];
         $hashedSlug = Hash::make($slug);
 
+        $newUser = Hotel::create([
+            'name' => $validated['name'],
+            'phone' => $validated['phone'],
+            'slug' => $hashedSlug,
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']), // Hash the password
+        ]);
 
-        $newuser=Hotel::create([
-            'name' => $validated["name"],
-            'phone' => $validated["phone"],
-            "slug"=>$hashedSlug,
-            "email"=>$validated["email"],
-            'password' => $validated["password"]]);
-             
-    return  response()->json(["message"=>"Signup Success","success"=>true,"info"=>$newuser],201);
-
-
+        return response()->json([
+            'message' => 'Signup Success',
+            'success' => true,
+            'info' => $newUser,
+        ], 201);
+    } catch (\Exception $e) {
+        return response()->json([
+            'message' => 'Verification failed: ' . $e->getMessage(),
+            'success' => false,
+        ], 500);
+    }
 }
-
 
 
 

@@ -36,7 +36,7 @@ use App\Http\Controllers\InsuranceController;
 
 use App\Http\Controllers\CruiseController;
 
-
+use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\BookedhotelsController;
 
 use App\Http\Controllers\HolidayspackageController;
@@ -161,6 +161,10 @@ Route::get('v1/user-bookings/{id}', [FlightController::class, 'getUserBookings']
 Route::post('v1/get-booking-details', [FlightController::class, 'getBookingDetails']);
 Route::post("v1/insurance",[InsuranceController::class,"GetInsurance"]);
 Route::post('v1/insurance-book', [InsuranceController::class, 'bookInsurance']);
+
+
+Route::post('/twilio-webhook', [ChatbotController::class, 'handleTwilioWebhook']);
+Route::post('/dialogflow-webhook', [ChatbotController::class, 'handleDialogflowWebhook']);
 
 Route::post("v1/cruise",[CruiseController::class,"sendCruiseMessage"]);
 Route::post("v1/charter",[CharterController::class,"sendCharterMessage"]);
