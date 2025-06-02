@@ -205,10 +205,7 @@
                         <td>Other Charges</td>
                         <td>{{ $invoiceData['Currency'] ?? 'USD' }} {{ number_format($invoiceData['OtherCharges'] ?? 0, 2) }}</td>
                     </tr>
-                    <tr>
-                        <td>Commission Earned</td>
-                        <td>{{ $invoiceData['Currency'] ?? 'USD' }} {{ number_format($invoiceData['CommissionEarned'] ?? 0, 2) }}</td>
-                    </tr>
+
                     <tr class="total">
                         <td><strong>Total</strong></td>
                         <td><strong>{{ $invoiceData['Currency'] ?? 'USD' }} {{ number_format($invoiceData['InvoiceAmount'] ?? 0, 2) }}</strong></td>

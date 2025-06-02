@@ -138,6 +138,8 @@ Route::post('v1/destination-search-static-data', [TransferController::class, 'ge
 
 Route::post('v1/create-razorpay-order', [RazorpayOrderController::class, 'createOrder']);
 
+Route::post('v1/send-booking-confirmation-email', [FlightController::class, 'sendBookingConfirmationEmail']);
+
 
 Route::post("v1/test", [HotelRegesController::class, "getHotelUser"]);
 Route::post("v1/hotelreq/signupHotel", [HotelRegesController::class, "sendVerify"]);

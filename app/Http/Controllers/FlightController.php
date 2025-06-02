@@ -926,6 +926,69 @@ class FlightController extends Controller
         }
     }
 
+    public function sendBookingConfirmationEmail(Request $request)
+{
+    try {
+        // Validate the request data
+        $validatedData = $request->validate([
+            'email' => 'required|email',
+            'bookingData' => 'required|array',
+            'bookingData.PNR' => 'nullable|string',
+            'bookingData.BookingId' => 'nullable|string',
+            'bookingData.Origin' => 'nullable|string',
+            'bookingData.Destination' => 'nullable|string',
+            'bookingData.AirlineCode' => 'nullable|string',
+            'bookingData.AirlineName' => 'nullable|string',
+            'bookingData.FlightNumber' => 'nullable|string',
+            'bookingData.DepTime' => 'nullable|string',
+            'bookingData.ArrTime' => 'nullable|string',
+            'bookingData.Segments' => 'nullable|array',
+            'passengerData' => 'nullable|array',
+            'invoiceData' => 'required|array',
+            'invoiceData.InvoiceNo' => 'nullable|string',
+            'invoiceData.InvoiceAmount' => 'nullable|numeric',
+            'invoiceData.InvoiceCreatedOn' => 'nullable|string',
+            'invoiceData.Currency' => 'nullable|string',
+            'invoiceData.BaseFare' => 'nullable|numeric',
+            'invoiceData.Tax' => 'nullable|numeric',
+            'invoiceData.OtherCharges' => 'nullable|numeric',
+            'invoiceData.CommissionEarned' => 'nullable|numeric',
+        ]);
+
+        // Send email
+        Mail::to($validatedData['email'])->send(new BookingConfirmationMail(
+            $validatedData['bookingData'],
+            $validatedData['passengerData'],
+            $validatedData['invoiceData']
+        ));
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Confirmation email sent successfully',
+        ], 200);
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Validation failed',
+            'errors' => $e->errors(),
+        ], 422);
+    } catch (\Exception $e) {
+        Log::error('Email Sending Error: ' . $e->getMessage(), [
+            'trace' => $e->getTraceAsString(),
+            'request' => $request->all(),
+        ]);
+
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Failed to send confirmation email',
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+}
+
+
+
 
     public function generateTicket(Request $request)
     {
