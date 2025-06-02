@@ -113,14 +113,7 @@ class HolidayspackageResource extends Resource
     
                 Repeater::make('activite')
                     ->schema([
-                        Select::make('day')
-                            ->options([
-                                '1' => 'Day 1',
-                                '2' => 'Day 2',
-                                '3' => 'Day 3',
-                                '4' => 'Day 4',
-                                '5' => 'Day 5',
-                            ])
+                        TextInput::make('day')
                             ->required(),
                         TextInput::make('activitie')
                             ->required(),

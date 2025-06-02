@@ -12,6 +12,7 @@ use App\Models\roomreg;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 
+use Twilio\Rest\Client;
 
 class HotelRegesController extends Controller
 {
