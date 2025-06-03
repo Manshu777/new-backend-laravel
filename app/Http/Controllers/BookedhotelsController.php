@@ -14,16 +14,16 @@ class BookedhotelsController extends Controller
     public function bookhotel(Request $request){
 
         $validate = Validator::make($request->all(), [
-"check_in_date" => "required",
-"check_out_date" => "required",
-"user_name" => "required|string|max:255", 
-"user_number" => "required|string|max:20", 
-"hotel_id"=>"required",
-"room_type" => "required|string|max:50",    
-"price" => "required|numeric|min:0",        
-"date_of_booking" => "required|date",          
-"hotel_name"=>"required|string",          
-            
+            "check_in_date" => "required",
+            "check_out_date" => "required",
+            "user_name" => "required|string|max:255", 
+            "user_number" => "required|string|max:20", 
+            "hotel_id"=>"required",
+            "room_type" => "required|string|max:50",    
+            "price" => "required|numeric|min:0",        
+            "date_of_booking" => "required|date",          
+            "hotel_name"=>"required|string",          
+                        
         
             
             

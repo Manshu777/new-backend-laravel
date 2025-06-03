@@ -132,7 +132,7 @@ class HotelControllerSearchRes extends Controller
         "IsDetailedResponse" => true,
         "Filters" => [
             "Refundable" => false,
-            "NoOfRooms" => 1, // Set to 1 as per your example
+            "NoOfRooms" => 1, 
             "MealType" => 0,
             "OrderBy" => 0,
             "StarRating" => 0,
@@ -170,12 +170,7 @@ class HotelControllerSearchRes extends Controller
             continue;
         }
 
-        // Check if hotel data exists in HotelData and is valid
-        $existingHotel = HotelData::where('hotel_code', $hotelCode)
-            ->where('city_code', $validated['cityCode'])
-            ->where('created_at', '>=', Carbon::now()->subDays(15))
-            ->first();
-
+     
         if ($existingHotel && !empty($existingHotel->search_results['Rooms']) && is_array($existingHotel->search_results['Rooms'])) {
             $hotelresult[] = [
                 'hotelDetails' => $existingHotel->hotel_details,
@@ -198,22 +193,7 @@ class HotelControllerSearchRes extends Controller
 
         $hotelDetails = json_decode($response2->getBody()->getContents(), true);
 
-        // Save to HotelData
-        HotelData::updateOrCreate(
-            [
-                'city_code' => $validated['cityCode'],
-                'hotel_code' => $hotelCode,
-            ],
-            [
-                'hotel_details' => $hotelDetails,
-                'search_results' => array_merge(
-                    ['Status' => $searchResults['Status'] ?? ['Code' => 200, 'Description' => 'Successful']],
-                    $hotelResult
-                ),
-            ]
-        );
-
-        // Only include hotels with available rooms
+       
         if (!empty($hotelResult['Rooms']) && is_array($hotelResult['Rooms'])) {
             $hotelresult[] = [
                 'hotelDetails' => $hotelDetails,
