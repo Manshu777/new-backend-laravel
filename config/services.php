@@ -38,6 +38,11 @@ return [
     'account_sid' => env('TWILIO_ACCOUNT_SID'),
     'auth_token' => env('TWILIO_AUTH_TOKEN'),
     'verify_service_sid' => env('TWILIO_VERIFY_SERVICE_SID'),
+
+    'matrix' => [
+        'base_url' => env('MATRIX_BASE_URL', 'https://azcms.matrix.co.in'),
+        'auth_token' => env('MATRIX_AUTH_TOKEN', 'b927c65283b74065a1d77e60c47356e0'),
+    ],
 ],
 
 ];

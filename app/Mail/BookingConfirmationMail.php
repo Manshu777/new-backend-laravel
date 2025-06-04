@@ -24,14 +24,14 @@ class BookingConfirmationMail extends Mailable
     {
 
         // Generate PDF from the same view
-        $pdf = Pdf::loadView('emails.booking_confirmation', [
+        $pdf = Pdf::loadView('emails.test-email', [
             'bookingData' => $this->bookingData,
             'passengerData' => $this->passengerData,
             'invoiceData' => $this->invoiceData,
         ]);
 
         return $this->subject('Your Flight Booking Confirmation')
-                    ->view('emails.booking_confirmation')
+                    ->view('emails.test-email')
                     ->with([
                         'bookingData' => $this->bookingData,
                         'passengerData' => $this->passengerData,

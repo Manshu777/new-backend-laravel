@@ -20,7 +20,7 @@ use App\Http\Controllers\TransferController;
 use App\Http\Controllers\TransferSearchController;
 use App\Http\Controllers\TicketBookingController;
 use App\Http\Controllers\RazorpayOrderController;
-
+use App\Http\Controllers\MatrixController;
 
     
 use App\Http\Controllers\ApiController;
@@ -45,7 +45,7 @@ use App\Http\Controllers\CharterController;
 use App\Http\Controllers\SitelayoutController;
 use App\Http\Controllers\RazorpayControllerNew;
 use App\Mail\InsuranceBookingConfirmation;
-
+use Carbon\Carbon;
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
@@ -74,6 +74,42 @@ Route::get('/test-ticket', [TicketBookingController::class, 'testTicketGeneratio
 
 
 // genrateTickBook
+
+Route::prefix('v1/matrix')->group(function () {
+
+    Route::get('/countries', [MatrixController::class, 'getCountries']);
+
+
+    Route::get('/plans', [MatrixController::class, 'getPlans']);
+
+  
+    Route::post('/validate-order', [MatrixController::class, 'validateOrder']);
+
+
+    Route::post('/create-order', [MatrixController::class, 'createOrder']);
+
+
+    Route::get('/orders', [MatrixController::class, 'getOrders']);
+
+
+    Route::post('/upload-documents', [MatrixController::class, 'uploadDocuments']);
+
+    // Get Wallet Balance
+    Route::get('/wallet-balance', [MatrixController::class, 'getWalletBalance']);
+
+
+    Route::get('/mobile-usage', [MatrixController::class, 'getMobileUsage']);
+
+
+    Route::get('/recharge-plans', [MatrixController::class, 'getRechargePlans']);
+
+
+    Route::post('/create-recharge', [MatrixController::class, 'createRecharge']);
+
+
+    Route::get('/sim-installation-status', [MatrixController::class, 'getSimInstallationStatus']);
+});
+
 
 
 Route::post('v1/flight-book-llc', [FlightController::class, 'genrateTickBook']);
@@ -105,7 +141,113 @@ Route::post('v1/hotel/bookdetails', [HotelControllerSearchRes::class, 'getBookin
 // routes/api.php
 
 
+Route::get('/test-flight', function () {
+    $booking = (object)[
+        'date' => '12 July 2025',
+        'from_code' => 'GSP',
+        'to_code' => 'ORD',
+        'from_city' => 'London',
+        'to_city' => 'Chicago',
+        'takeoff_time' => '11:15 PM',
+        'landing_time' => '2:10 PM',
+        'flight_number' => 'PQ 451',
+        'duration' => '8h 55m',
+        'seat' => '24C',
+        'class' => 'Economy',
+        'terminal' => 'D',
+        'luggage' => '1x23kg',
+        'card_type' => 'American Express',
+        'card_last4' => '9805',
+        'passenger_name' => 'Robert Brian Henderson',
+        'subtotal' => '240.00',
+        'tax' => '37.53',
+        'total' => '297.53',
+        'download_link' => 'https://yourdomain.com/download-ticket',
+        'change_link' => 'https://yourdomain.com/change-flight',
+        'manage_link' => 'https://yourdomain.com/manage',
+        'support_email' => 'support@yourdomain.com'
+    ];
 
+    return view('emails.test-email', compact('booking'));
+});
+
+Route::get('/test-flight-email', function () {
+    $booking = (object)[
+        'date' => '12 July 2025',
+        'from_code' => 'GSP',
+        'to_code' => 'ORD',
+        'from_city' => 'London',
+        'to_city' => 'Chicago',
+        'takeoff_time' => '11:15 PM',
+        'landing_time' => '2:10 PM',
+        'flight_number' => 'PQ451',
+        'duration' => '8h 55m',
+        'seat' => '24C',
+        'class' => 'Economy',
+        'terminal' => 'D',
+        'luggage' => '1x23kg',
+        'card_type' => 'American Express',
+        'card_last4' => '9805',
+        'passenger_name' => 'Robert Brian Henderson',
+        'subtotal' => '240.00',
+        'tax' => '37.53',
+        'total' => '297.53',
+        'download_link' => 'https://yourdomain.com/download-ticket',
+        'change_link' => 'https://yourdomain.com/change-flight',
+        'manage_link' => 'https://yourdomain.com/manage',
+        'support_email' => 'support@yourdomain.com'
+    ];
+
+    $bookingData = [
+        'PNR' => 'ABC123',
+        'BookingId' => 'FL987654',
+        'Origin' => $booking->from_city . ' (' . $booking->from_code . ')',
+        'Destination' => $booking->to_city . ' (' . $booking->to_code . ')',
+        'manage_link' => $booking->manage_link,
+        'download_link' => $booking->download_link,
+        'change_link' => $booking->change_link,
+        'Segments' => [
+            [
+                'Airline' => [
+                    'AirlineCode' => substr($booking->flight_number, 0, 2),
+                    'AirlineName' => 'Generic Airways',
+                    'FlightNumber' => $booking->flight_number
+                ],
+                'Origin' => [
+                    'DepTime' => Carbon::parse($booking->date . ' ' . $booking->takeoff_time)->toDateTimeString()
+                ],
+                'Destination' => [
+                    'ArrTime' => Carbon::parse($booking->date . ' ' . $booking->landing_time)->addDay()->toDateTimeString()
+                ],
+                'Duration' => 535
+            ]
+        ]
+    ];
+
+    $passengerData = [
+        [
+            'Title' => 'Mr',
+            'FirstName' => 'Robert',
+            'LastName' => 'Brian Henderson',
+            'PaxType' => 1,
+            'PassportNo' => 'N/A',
+            'ContactNo' => 'N/A',
+            'Email' => $booking->support_email
+        ]
+    ];
+
+    $invoiceData = [
+        'InvoiceNo' => 'INV-' . date('Y') . '-001',
+        'InvoiceCreatedOn' => Carbon::now()->toDateTimeString(),
+        'Currency' => 'USD',
+        'BaseFare' => floatval($booking->subtotal),
+        'Tax' => floatval($booking->tax),
+        'OtherCharges' => 0.00,
+        'InvoiceAmount' => floatval($booking->total)
+    ];
+
+    return view('emails.test-email', compact('bookingData', 'passengerData', 'invoiceData'));
+});
 
 Route::post('/upload-image', [ImageController::class, 'store']);
 
