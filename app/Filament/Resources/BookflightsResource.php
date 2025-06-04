@@ -66,9 +66,6 @@ class BookflightsResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('user_id')
-                    ->numeric()
-                    ->sortable(),
                 Tables\Columns\TextColumn::make('user_name')
                     ->searchable(),
               Tables\Columns\TextColumn::make('pnr')->label('PNR Number'),
@@ -87,6 +84,11 @@ class BookflightsResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('date_of_booking')
                     ->dateTime()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('commission_earned')
+
+                    ->label('Commission Earned')
                     ->sortable(),
            
                 Tables\Columns\IconColumn::make('ticket_status')

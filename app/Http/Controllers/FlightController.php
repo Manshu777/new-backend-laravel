@@ -745,8 +745,8 @@ class FlightController extends Controller
             'pnr' => $bookingResponse['PNR'] ?? null,
             'booking_id' => $bookingResponse['BookingId'] ?? null,
             'flight_name' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['AirlineName'] ?? null,
-            'departure_from' => $bookingResponse['FlightItinerary']['Origin'] ?? null,
-            'arrival_to' => $bookingResponse['FlightItinerary']['Destination'] ?? null,
+            'departure_from' => $bookingResponse['FlightItinerary']['Segments'][0]['origin']['CityName'] ?? null,
+            'arrival_to' => $bookingResponse['FlightItinerary']['Segments'][0]['Destination']['CityName'] ?? null,
             'flight_date' => isset($bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'])
                 ? \Carbon\Carbon::parse($bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'])->toDateString()
                 : null,
@@ -767,8 +767,8 @@ class FlightController extends Controller
         $bookingData = [
             'PNR' => $bookingResponse['PNR'] ?? 'N/A',
             'BookingId' => $bookingResponse['BookingId'] ?? 'N/A',
-            'Origin' => $bookingResponse['FlightItinerary']['Origin'] ?? 'N/A',
-            'Destination' => $bookingResponse['FlightItinerary']['Destination'] ?? 'N/A',
+            'Origin' => $bookingResponse['FlightItinerary']['Segments'][0]['Origin']['CityName']  ?? 'N/A',
+            'Destination' => $bookingResponse['FlightItinerary']['Segments'][0]['Destination']['CityName'] ?? 'N/A',
             'AirlineCode' => $bookingResponse['FlightItinerary']['AirlineCode'] ?? 'N/A',
             'AirlineName' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['AirlineName'] ?? 'N/A',
             'FlightNumber' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['FlightNumber'] ?? 'N/A',
@@ -787,7 +787,7 @@ class FlightController extends Controller
             'BaseFare' => $bookingResponse['FlightItinerary']['Fare']['BaseFare'] ?? 0,
             'Tax' => $bookingResponse['FlightItinerary']['Fare']['Tax'] ?? 0,
             'OtherCharges' => $bookingResponse['FlightItinerary']['Fare']['OtherCharges'] ?? 0,
-            'CommissionEarned' => $bookingResponse['FlightItinerary']['Fare']['CommissionEarned'] ?? 0,
+            
         ];
 
         // Send email

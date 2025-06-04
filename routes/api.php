@@ -43,7 +43,7 @@ use App\Http\Controllers\HolidayspackageController;
 use App\Http\Controllers\CharterController;
 
 use App\Http\Controllers\SitelayoutController;
-
+use App\Http\Controllers\RazorpayControllerNew;
 use App\Mail\InsuranceBookingConfirmation;
 
 Route::get('/user', function (Request $request) {
@@ -113,7 +113,7 @@ Route::post('v1/hotelslist', [HotelController::class, 'getHotelDetails']);
 Route::post('v1/sightseeing/search', [SightseeingController::class, 'search']);
 Route::post('v1/sightseeing', [SightseeingController::class, 'meRandomdata']);
 
-
+Route::post('v1/verify-razorpay-payment', [RazorpayControllerNew::class, 'verifyPayment']);
 
 Route::get('v1/bus/cities', [BusController::class, 'searchBusCityList']);
 Route::post('v1/bus/search', [BusControllerSearch::class, 'searchBuses']);
