@@ -125,7 +125,7 @@ Route::post('/v1/flight-send-change-request', [FlightController::class, 'sendCha
 Route::apiResource('v1/blog', BlogController::class);
 
 
-
+Route::post('/initiate-razorpay-refund', [RazorpayControllerNew::class, 'initiateRazorpayRefund']);
 
 Route::get('v1/cities', [TBOController::class, 'fetchCities']);
 Route::post('v1/hotels', [TBOController::class, 'fetchHotels']);

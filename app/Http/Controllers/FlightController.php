@@ -623,8 +623,8 @@ class FlightController extends Controller
                 'Passengers.*.PaxType' => 'required|integer',
                 'Passengers.*.DateOfBirth' => 'required|date',
                 'Passengers.*.Gender' => 'required|integer',
-                 'Passengers.*.PassportNo' => 'nullable|string', 
-                 'Passengers.*.PassportExpiry' => 'nullable|date',
+                'Passengers.*.PassportNo' => 'nullable|string',
+                'Passengers.*.PassportExpiry' => 'nullable|date',
                 'Passengers.*.AddressLine1' => 'required|string',
                 'Passengers.*.City' => 'required|string',
                 'Passengers.*.CountryCode' => 'required|string',
@@ -729,75 +729,75 @@ class FlightController extends Controller
                     ], 400);
                 }
 
-                throw new \Exception('Booking failed: ' . $errorMessage);
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Booking failed',
+                    'error' => $errorMessage,
+                ], 400);
             }
 
             $bookingResponse = $response->json('Response.Response');
 
-              Log::info('Booking Response', ['data' => $bookingResponse]);
+            Log::info('Booking Response', ['data' => $bookingResponse]);
 
-                // Store booking details
-        Bookflights::create([
-            'token' => $token,
-            'trace_id' => $validatedData['TraceId'],
-            'user_ip' => $validatedData['EndUserIp'],
-            'user_id' => $validatedData['user_id'],
-            'pnr' => $bookingResponse['PNR'] ?? null,
-            'booking_id' => $bookingResponse['BookingId'] ?? null,
-            'flight_name' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['AirlineName'] ?? null,
-            'departure_from' => $bookingResponse['FlightItinerary']['Segments'][0]['origin']['CityName'] ?? null,
-            'arrival_to' => $bookingResponse['FlightItinerary']['Segments'][0]['Destination']['CityName'] ?? null,
-            'flight_date' => isset($bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'])
-                ? \Carbon\Carbon::parse($bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'])->toDateString()
-                : null,
-            'date_of_booking' => now(),
-            'username' => $validatedData['email'],
-            'user_name' => $validatedData['Passengers'][0]['FirstName'] . ' ' . $validatedData['Passengers'][0]['LastName'],
-            'phone_number' => $validatedData['Passengers'][0]['ContactNo'],
-            'airline_code' => $bookingResponse['FlightItinerary']['AirlineCode'] ?? null,
-            'flight_number' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['FlightNumber'] ?? null,
-            'departure_time' => $bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'] ?? null,
-            'arrival_time' => $bookingResponse['FlightItinerary']['Segments'][0]['Destination']['ArrTime'] ?? null,
-            'duration' => $bookingResponse['FlightItinerary']['Segments'][0]['Duration'] ?? null,
-            'commission_earned' => $bookingResponse['FlightItinerary']['Fare']['CommissionEarned'] ?? 0.0,
-            'segments' => $bookingResponse['FlightItinerary']['Segments'] ?? [], // Store all segments as JSON
-        ]);
+            // Store booking details
+            Bookflights::create([
+                'token' => $token,
+                'trace_id' => $validatedData['TraceId'],
+                'user_ip' => $validatedData['EndUserIp'],
+                'user_id' => $validatedData['user_id'],
+                'pnr' => $bookingResponse['PNR'] ?? null,
+                'booking_id' => $bookingResponse['BookingId'] ?? null,
+                'flight_name' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['AirlineName'] ?? null,
+                'departure_from' => $bookingResponse['FlightItinerary']['Segments'][0]['Origin']['CityName'] ?? null,
+                'arrival_to' => $bookingResponse['FlightItinerary']['Segments'][0]['Destination']['CityName'] ?? null,
+                'flight_date' => isset($bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'])
+                    ? \Carbon\Carbon::parse($bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'])->toDateString()
+                    : null,
+                'date_of_booking' => now(),
+                'username' => $validatedData['email'],
+                'user_name' => $validatedData['Passengers'][0]['FirstName'] . ' ' . $validatedData['Passengers'][0]['LastName'],
+                'phone_number' => $validatedData['Passengers'][0]['ContactNo'],
+                'airline_code' => $bookingResponse['FlightItinerary']['AirlineCode'] ?? null,
+                'flight_number' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['FlightNumber'] ?? null,
+                'departure_time' => $bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'] ?? null,
+                'arrival_time' => $bookingResponse['FlightItinerary']['Segments'][0]['Destination']['ArrTime'] ?? null,
+                'duration' => $bookingResponse['FlightItinerary']['Segments'][0]['Duration'] ?? null,
+                'commission_earned' => $bookingResponse['FlightItinerary']['Fare']['CommissionEarned'] ?? 0.0,
+                'segments' => $bookingResponse['FlightItinerary']['Segments'] ?? [], // Store all segments as JSON
+            ]);
 
+            $bookingData = [
+                'PNR' => $bookingResponse['PNR'] ?? 'N/A',
+                'BookingId' => $bookingResponse['BookingId'] ?? 'N/A',
+                'Origin' => $bookingResponse['FlightItinerary']['Segments'][0]['Origin']['CityName'] ?? 'N/A',
+                'Destination' => $bookingResponse['FlightItinerary']['Segments'][0]['Destination']['CityName'] ?? 'N/A',
+                'AirlineCode' => $bookingResponse['FlightItinerary']['AirlineCode'] ?? 'N/A',
+                'AirlineName' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['AirlineName'] ?? 'N/A',
+                'FlightNumber' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['FlightNumber'] ?? 'N/A',
+                'DepTime' => $bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'] ?? 'N/A',
+                'ArrTime' => $bookingResponse['FlightItinerary']['Segments'][0]['Destination']['ArrTime'] ?? 'N/A',
+                'Segments' => $bookingResponse['FlightItinerary']['Segments'] ?? [],
+            ];
 
-        $bookingData = [
-            'PNR' => $bookingResponse['PNR'] ?? 'N/A',
-            'BookingId' => $bookingResponse['BookingId'] ?? 'N/A',
-            'Origin' => $bookingResponse['FlightItinerary']['Segments'][0]['Origin']['CityName']  ?? 'N/A',
-            'Destination' => $bookingResponse['FlightItinerary']['Segments'][0]['Destination']['CityName'] ?? 'N/A',
-            'AirlineCode' => $bookingResponse['FlightItinerary']['AirlineCode'] ?? 'N/A',
-            'AirlineName' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['AirlineName'] ?? 'N/A',
-            'FlightNumber' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['FlightNumber'] ?? 'N/A',
-            'DepTime' => $bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'] ?? 'N/A',
-            'ArrTime' => $bookingResponse['FlightItinerary']['Segments'][0]['Destination']['ArrTime'] ?? 'N/A',
-            'Segments' => $bookingResponse['FlightItinerary']['Segments'] ?? [], // Pass all segments to email
-        ];
+            $passengerData = $bookingResponse['FlightItinerary']['Passenger'] ?? [];
 
-        $passengerData = $bookingResponse['FlightItinerary']['Passenger'] ?? [];
+            $invoiceData = [
+                'InvoiceNo' => $bookingResponse['FlightItinerary']['InvoiceNo'] ?? 'N/A',
+                'InvoiceAmount' => $bookingResponse['FlightItinerary']['InvoiceAmount'] ?? 0,
+                'InvoiceCreatedOn' => $bookingResponse['FlightItinerary']['InvoiceCreatedOn'] ?? 'N/A',
+                'Currency' => $bookingResponse['FlightItinerary']['Fare']['Currency'] ?? 'INR',
+                'BaseFare' => $bookingResponse['FlightItinerary']['Fare']['BaseFare'] ?? 0,
+                'Tax' => $bookingResponse['FlightItinerary']['Fare']['Tax'] ?? 0,
+                'OtherCharges' => $bookingResponse['FlightItinerary']['Fare']['OtherCharges'] ?? 0,
+            ];
 
-        $invoiceData = [
-            'InvoiceNo' => $bookingResponse['FlightItinerary']['InvoiceNo'] ?? 'N/A',
-            'InvoiceAmount' => $bookingResponse['FlightItinerary']['InvoiceAmount'] ?? 0,
-            'InvoiceCreatedOn' => $bookingResponse['FlightItinerary']['InvoiceCreatedOn'] ?? 'N/A',
-            'Currency' => $bookingResponse['FlightItinerary']['Fare']['Currency'] ?? 'USD',
-            'BaseFare' => $bookingResponse['FlightItinerary']['Fare']['BaseFare'] ?? 0,
-            'Tax' => $bookingResponse['FlightItinerary']['Fare']['Tax'] ?? 0,
-            'OtherCharges' => $bookingResponse['FlightItinerary']['Fare']['OtherCharges'] ?? 0,
-            
-        ];
-
-        // Send email
-        Mail::to($validatedData['email'])->send(new BookingConfirmationMail($bookingData, $passengerData, $invoiceData));
-
-        
+            // Send email
+            Mail::to($validatedData['email'])->send(new BookingConfirmationMail($bookingData, $passengerData, $invoiceData));
 
             return response()->json([
                 'status' => 'success',
-                'data' => $response->json(),
+                'data' => $bookingResponse,
                 'message' => 'Booking created successfully and confirmation email sent',
             ], 200);
 
@@ -805,7 +805,7 @@ class FlightController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
-                'errors' => $e->errors(),
+                'error' => $e->errors(),
             ], 422);
         } catch (\Illuminate\Http\Client\RequestException $e) {
             return response()->json([

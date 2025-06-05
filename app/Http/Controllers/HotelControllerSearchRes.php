@@ -19,226 +19,269 @@ class HotelControllerSearchRes extends Controller
 {
 
 
+
     public function searchHotels(Request $request)
-{
-    $validated = $request->validate([
-        'cityCode' => 'required|string',
-        'checkIn' => 'required|date',
-        'checkOut' => 'required|date',
-        'adults' => 'required|integer|min:1',
-        'children' => 'required|integer|min:0',
-        'childrenAges' => 'nullable|array', // Add validation for children ages
-        'childrenAges.*' => 'nullable|integer|min:0|max:17', // Validate each age
-        'guestNationality' => 'required|string',
-    ]);
+    {
+        $validated = $request->validate([
+            'cityCode' => 'required|string',
+            'checkIn' => 'required|date',
+            'checkOut' => 'required|date',
+            'adults' => 'required|integer|min:1',
+            'children' => 'required|integer|min:0',
+            'childrenAges' => 'nullable|array',
+            'childrenAges.*' => 'nullable|integer|min:0|max:17',
+            'guestNationality' => 'required|string',
+        ]);
 
-    $hotelresult = [];
+        $hotelresult = [];
 
-    // Check database for valid hotel data (within 15 days)
-    $dbHotels = HotelData::where('city_code', $validated['cityCode'])
-        ->where('created_at', '>=', Carbon::now()->subDays(15))
-        ->get();
+        // Check database for valid hotel data (within 15 days)
+        $dbHotels = HotelData::where('city_code', $validated['cityCode'])
+            ->where('created_at', '>=', Carbon::now()->subDays(15))
+            ->get();
 
-    if ($dbHotels->isNotEmpty()) {
-        foreach ($dbHotels as $hotel) {
-            $hotelresult[] = [
-                'hotelDetails' => $hotel->hotel_details,
-                'searchResults' => $hotel->search_results,
-            ];
+        if ($dbHotels->isNotEmpty()) {
+            foreach ($dbHotels as $hotel) {
+                $hotelresult[] = [
+                    'hotelDetails' => $hotel->hotel_details,
+                    'searchResults' => $hotel->search_results,
+                ];
+            }
+
+            return response()->json([
+                'totalHotels' => $hotelresult,
+            ]);
         }
 
-        return response()->json([
-            'totalHotels' => $hotelresult,
-        ]);
-    }
+        // Check TBOHotelCode table for valid hotel codes (within 15 days)
+        $dbHotelCodes = TBOHotelCode::where('city_code', $validated['cityCode'])
+            ->where('created_at', '>=', Carbon::now()->subDays(15))
+            ->get();
 
-    // Check TBOHotelCode table for valid hotel codes (within 15 days)
-    $dbHotelCodes = TBOHotelCode::where('city_code', $validated['cityCode'])
-        ->where('created_at', '>=', Carbon::now()->subDays(15))
-        ->get();
+        $hotelCodes = [];
+        if ($dbHotelCodes->isNotEmpty()) {
+            $hotelCodes = $dbHotelCodes->pluck('hotel_code')->toArray();
+        } else {
+            // No valid data in TBOHotelCode, fetch from API
+            $client = new Client();
+            $startTime = microtime(true);
+            $response1 = $client->post('http://api.tbotechnology.in/TBOHolidays_HotelAPI/TBOHotelCodeList', [
+                'auth' => ['TBOStaticAPITest', 'Tbo@11530818'],
+                'json' => [
+                    "CityCode" => $validated['cityCode'],
+                    "IsDetailedResponse" => true,
+                ]
+            ]);
+            $executionTime = (microtime(true) - $startTime) * 1000; // Convert to milliseconds
+            Log::info('HotelCodeList API Request', [
+                'cityCode' => $validated['cityCode'],
+                'executionTimeMs' => $executionTime,
+            ]);
 
-    $hotelCodes = [];
-    if ($dbHotelCodes->isNotEmpty()) {
-        $hotelCodes = $dbHotelCodes->pluck('hotel_code')->toArray();
-    } else {
-        // No valid data in TBOHotelCode, fetch from API
-        $client = new Client();
-        $response1 = $client->post('http://api.tbotechnology.in/TBOHolidays_HotelAPI/TBOHotelCodeList', [
-            'auth' => ['TBOStaticAPITest', 'Tbo@11530818'],
-            'json' => [
-                "CityCode" => $validated['cityCode'],
-                "IsDetailedResponse" => true,
-            ]
-        ]);
+            $hotelData = json_decode($response1->getBody()->getContents(), true);
+            $hotels = $hotelData['Hotels'] ?? [];
 
-        $hotelData = json_decode($response1->getBody()->getContents(), true);
-        $hotels = $hotelData['Hotels'] ?? [];
+            if (empty($hotels)) {
+                return response()->json([
+                    'message' => 'No hotels available',
+                    'totalHotels' => [],
+                ]);
+            }
 
-        if (empty($hotels)) {
+            // Save hotel codes to TBOHotelCode table
+            foreach ($hotels as $hotel) {
+                TBOHotelCode::updateOrCreate(
+                    [
+                        'hotel_code' => $hotel['HotelCode'],
+                        'city_code' => $validated['cityCode'],
+                    ],
+                    [
+                        'hotel_name' => $hotel['HotelName'] ?? null,
+                        'latitude' => $hotel['Latitude'] ?? null,
+                        'longitude' => $hotel['Longitude'] ?? null,
+                        'hotel_rating' => $hotel['StarRating'] ?? null,
+                        'address' => $hotel['Address'] ?? null,
+                        'country_name' => $hotel['CountryName'] ?? null,
+                        'country_code' => $hotel['CountryCode'] ?? null,
+                        'city_name' => $hotel['CityName'] ?? null,
+                    ]
+                );
+            }
+
+            $hotelCodes = array_column($hotels, 'HotelCode');
+        }
+
+        $hotelCodes = array_slice($hotelCodes, 0, 1000); // Limit to 1000 hotel codes for processing
+        if (empty($hotelCodes)) {
             return response()->json([
                 'message' => 'No hotels available',
                 'totalHotels' => [],
             ]);
         }
 
-        // Save hotel codes to TBOHotelCode table
-        foreach ($hotels as $hotel) {
-            TBOHotelCode::updateOrCreate(
-                [
-                    'hotel_code' => $hotel['HotelCode'],
-                    'city_code' => $validated['cityCode'],
-                ],
-                [
-                    'hotel_name' => $hotel['HotelName'] ?? null,
-                    'latitude' => $hotel['Latitude'] ?? null,
-                    'longitude' => $hotel['Longitude'] ?? null,
-                    'hotel_rating' => $hotel['StarRating'] ?? null,
-                    'address' => $hotel['Address'] ?? null,
-                    'country_name' => $hotel['CountryName'] ?? null,
-                    'country_code' => $hotel['CountryCode'] ?? null,
-                    'city_name' => $hotel['CityName'] ?? null,
-                ]
-            );
+        // Split hotel codes into chunks of 100
+        $hotelCodeChunks = array_chunk($hotelCodes, 100);
+        $client = new Client();
+        $requests = function ($hotelCodeChunks) use ($validated, $client) {
+            foreach ($hotelCodeChunks as $index => $chunk) {
+                $hotelCodesString = implode(',', $chunk);
+                $payload = [
+                    "CheckIn" => $validated['checkIn'],
+                    "CheckOut" => $validated['checkOut'],
+                    "HotelCodes" => $hotelCodesString,
+                    "GuestNationality" => $validated['guestNationality'],
+                    "PaxRooms" => [
+                        [
+                            "Adults" => $validated['adults'],
+                            "Children" => $validated['children'],
+                            "ChildrenAges" => $validated['children'] > 0 ? ($validated['childrenAges'] ?? array_fill(0, $validated['children'], null)) : null,
+                        ]
+                    ],
+                    "ResponseTime" => 23,
+                    "IsDetailedResponse" => true,
+                    "Filters" => [
+                        "Refundable" => false,
+                        "NoOfRooms" => 1,
+                        "MealType" => 0,
+                        "OrderBy" => 0,
+                        "StarRating" => 0,
+                        "HotelName" => null,
+                    ]
+                ];
+
+                yield new GuzzleRequest('POST', 'https://affiliate.tektravels.com/HotelAPI/Search', [
+                    'Authorization' => 'Basic ' . base64_encode('Apkatrip:Apkatrip@1234'),
+                    'Content-Type' => 'application/json',
+                ], json_encode($payload));
+            }
+        };
+
+        $hotelresult = [];
+        $pool = new Pool($client, $requests($hotelCodeChunks), [
+            'concurrency' => 5, // Adjust concurrency level as needed
+            'fulfilled' => function ($response, $index) use (&$hotelresult, $hotelCodeChunks, $client, $validated) {
+                $startTime = microtime(true);
+                $searchResults = json_decode($response->getBody()->getContents(), true);
+                $executionTime = (microtime(true) - $startTime) * 1000; // Convert to milliseconds
+                Log::info('Hotel Search API Response for Chunk', [
+                    'chunkIndex' => $index,
+                    'hotelCodes' => implode(',', $hotelCodeChunks[$index]),
+                    'executionTimeMs' => $executionTime,
+                    'response' => $searchResults,
+                ]);
+
+                // Check if the response indicates no available rooms globally
+                if (isset($searchResults['Status']['Code']) && $searchResults['Status']['Code'] === 201 && $searchResults['Status']['Description'] === "No Available rooms for given criteria") {
+                    return;
+                }
+
+                // Process search results for each hotel
+                $hotels = $searchResults['HotelResult'] ?? $searchResults['HotelResults'] ?? [];
+                foreach ($hotels as $hotelResult) {
+                    $hotelCode = $hotelResult['HotelCode'] ?? null;
+                    if (!$hotelCode) {
+                        Log::warning('Missing HotelCode in search result', [
+                            'chunkIndex' => $index,
+                            'hotelResult' => $hotelResult,
+                        ]);
+                        continue;
+                    }
+
+                    // Check if hotel data already exists in HotelData
+                    $existingHotel = HotelData::where('hotel_code', $hotelCode)
+                        ->where('city_code', $validated['cityCode'])
+                        ->where('created_at', '>=', Carbon::now()->subDays(15))
+                        ->first();
+
+                    if ($existingHotel && !empty($existingHotel->search_results['Rooms']) && is_array($existingHotel->search_results['Rooms'])) {
+                        $hotelresult[] = [
+                            'hotelDetails' => $existingHotel->hotel_details,
+                            'searchResults' => array_merge(
+                                ['Status' => $searchResults['Status'] ?? ['Code' => 200, 'Description' => 'Successful']],
+                                $existingHotel->search_results
+                            ),
+                        ];
+                        continue;
+                    }
+
+                    // Fetch hotel details
+                    try {
+                        $detailStartTime = microtime(true);
+                        $response2 = $client->post('http://api.tbotechnology.in/TBOHolidays_HotelAPI/Hoteldetails', [
+                            'auth' => ['TBOStaticAPITest', 'Tbo@11530818'],
+                            'json' => [
+                                "Hotelcodes" => $hotelCode,
+                                "Language" => "EN",
+                            ]
+                        ]);
+                        $detailExecutionTime = (microtime(true) - $detailStartTime) * 1000; // Convert to milliseconds
+                        Log::info('Hotel Details API Request', [
+                            'hotelCode' => $hotelCode,
+                            'executionTimeMs' => $detailExecutionTime,
+                        ]);
+
+                        $hotelDetails = json_decode($response2->getBody()->getContents(), true);
+
+                        if (!empty($hotelResult['Rooms']) && is_array($hotelResult['Rooms'])) {
+                            $hotelresult[] = [
+                                'hotelDetails' => $hotelDetails,
+                                'searchResults' => array_merge(
+                                    ['Status' => $searchResults['Status'] ?? ['Code' => 200, 'Description' => 'Successful']],
+                                    $hotelResult
+                                ),
+                            ];
+
+                            // Save to HotelData
+                            HotelData::updateOrCreate(
+                                [
+                                    'hotel_code' => $hotelCode,
+                                    'city_code' => $validated['cityCode'],
+                                ],
+                                [
+                                    'hotel_details' => $hotelDetails,
+                                    'search_results' => $hotelResult,
+                                ]
+                            );
+                        }
+                    } catch (\Exception $e) {
+                        Log::error('Hotel Details API Error', [
+                            'hotelCode' => $hotelCode,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+            },
+            'rejected' => function (RequestException $reason, $index) use ($hotelCodeChunks) {
+                Log::error('Hotel Search API Error for Chunk', [
+                    'chunkIndex' => $index,
+                    'hotelCodes' => implode(',', $hotelCodeChunks[$index]),
+                    'error' => $reason->getMessage(),
+                ]);
+            },
+        ]);
+
+        // Execute the pool of requests
+        $promise = $pool->promise();
+        $promise->wait();
+
+        if (empty($hotelresult)) {
+            Log::warning('No hotels added to hotelresult', [
+                'hotel_count' => count($hotels),
+                'validated_input' => $validated,
+                'hotel_codes' => $hotelCodes,
+            ]);
+            return response()->json([
+                'message' => 'No hotels available',
+                'statusCode' => 200,
+                'totalHotels' => [],
+            ]);
         }
 
-        $hotelCodes = array_column($hotels, 'HotelCode');
-    }
-
-    $hotelCodes = array_slice($hotelCodes, 0, 100); // Limit to 100 hotel codes
-    if (empty($hotelCodes)) {
         return response()->json([
-            'message' => 'No hotels available',
-            'totalHotels' => [],
+            'statusCode' => 200,
+            'totalHotels' => $hotelresult,
         ]);
     }
-
-    // Prepare payload for hotel search with multiple hotel codes
-    $client = new Client();
-    $hotelCodesString = implode(',', $hotelCodes);
-
-    $payload = [
-        "CheckIn" => $validated['checkIn'],
-        "CheckOut" => $validated['checkOut'],
-        "HotelCodes" => $hotelCodesString,
-        "GuestNationality" => $validated['guestNationality'],
-        "PaxRooms" => [
-            [
-                "Adults" => $validated['adults'],
-                "Children" => $validated['children'],
-                "ChildrenAges" => $validated['children'] > 0 ? ($validated['childrenAges'] ?? array_fill(0, $validated['children'], null)) : null,
-            ]
-        ],
-        "ResponseTime" => 23,
-        "IsDetailedResponse" => true,
-        "Filters" => [
-            "Refundable" => false,
-            "NoOfRooms" => 1, 
-            "MealType" => 0,
-            "OrderBy" => 0,
-            "StarRating" => 0,
-            "HotelName" => null,
-        ]
-    ];
-
-    // Log the payload
-    Log::info('Hotel API Request Payload:', $payload);
-
-    try {
-    $response3 = $client->post('https://affiliate.tektravels.com/HotelAPI/Search', [
-        'auth' => ['Apkatrip', 'Apkatrip@1234'],
-        'json' => $payload
-    ]);
-
-    $searchResults = json_decode($response3->getBody()->getContents(), true);
-    Log::info('Hotel Search API Response:', ['response' => $searchResults]);
-
-    // Check if the response indicates no available rooms globally
-    if (isset($searchResults['Status']['Code']) && $searchResults['Status']['Code'] === 201 && $searchResults['Status']['Description'] === "No Available rooms for given criteria") {
-        return response()->json([
-            'message' => 'No hotels available',
-            'statusCode' => 201,
-            'totalHotels' => [],
-        ]);
-    }
-
-    // Process search results for each hotel
-    $hotels = $searchResults['HotelResult'] ?? $searchResults['HotelResults'] ?? [];
-    foreach ($hotels as $hotelResult) {
-        $hotelCode = $hotelResult['HotelCode'] ?? null;
-        if (!$hotelCode) {
-            Log::warning('Missing HotelCode in search result', ['hotelResult' => $hotelResult]);
-            continue;
-        }
-
-     
-        if ($existingHotel && !empty($existingHotel->search_results['Rooms']) && is_array($existingHotel->search_results['Rooms'])) {
-            $hotelresult[] = [
-                'hotelDetails' => $existingHotel->hotel_details,
-                'searchResults' => array_merge(
-                    ['Status' => $searchResults['Status'] ?? ['Code' => 200, 'Description' => 'Successful']],
-                    $existingHotel->search_results
-                ),
-            ];
-            continue;
-        }
-
-        // Fetch hotel details
-        $response2 = $client->post('http://api.tbotechnology.in/TBOHolidays_HotelAPI/Hoteldetails', [
-            'auth' => ['TBOStaticAPITest', 'Tbo@11530818'],
-            'json' => [
-                "Hotelcodes" => $hotelCode,
-                "Language" => "EN",
-            ]
-        ]);
-
-        $hotelDetails = json_decode($response2->getBody()->getContents(), true);
-
-       
-        if (!empty($hotelResult['Rooms']) && is_array($hotelResult['Rooms'])) {
-            $hotelresult[] = [
-                'hotelDetails' => $hotelDetails,
-                'searchResults' => array_merge(
-                    ['Status' => $searchResults['Status'] ?? ['Code' => 200, 'Description' => 'Successful']],
-                    $hotelResult
-                ),
-            ];
-        }
-    }
-
-    if (empty($hotelresult)) {
-        Log::warning('No hotels added to hotelresult', [
-            'hotel_count' => count($hotels),
-            'validated_input' => $validated,
-            'hotel_codes' => $hotelCodes
-        ]);
-        return response()->json([
-            'message' => 'No hotels available',
-            'statusCode' => $searchResults['Status']['Code'] ?? 200,
-            'totalHotels' => [],
-        ]);
-    }
-
-    return response()->json([
-        'statusCode' => $searchResults['Status']['Code'] ?? 200,
-        'totalHotels' => $hotelresult,
-    ]);
-
-} catch (\Exception $e) {
-    Log::error('Hotel API Error: ' . $e->getMessage());
-    return response()->json([
-        'message' => 'Error fetching hotel data',
-        'error' => $e->getMessage(),
-        'statusCode' => 500,
-        'totalHotels' => [],
-    ], 500);
-}
-
-
- 
-    
-}
- 
-
 
 
    public function singleHotelget(Request $request)

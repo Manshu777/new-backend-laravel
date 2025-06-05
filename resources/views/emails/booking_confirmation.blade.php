@@ -116,9 +116,7 @@
  <body>
     <div class="container">
         <div class="header">
-            <!-- Replace with your logo URL -->
-            <img src="https://via.placeholder.com/150x50?text=Your+Logo" alt="Travel Agency Logo">
-            <h1>Flight Booking Confirmation</h1>
+            <h1>Next Gen Trip Flight Booking Confirmation</h1>
         </div>
 
         <div class="section">

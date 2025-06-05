@@ -34,4 +34,37 @@ class RazorpayControllerNew extends Controller
             ], 400);
         }
     }
+
+    public function initiateRazorpayRefund(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'razorpay_payment_id' => 'required|string',
+                'amount' => 'required|numeric|min:1',
+            ]);
+
+            $refund = $this->razorpay->payment
+                ->fetch($validated['razorpay_payment_id'])
+                ->refund([
+                    'amount' => $validated['amount'], // Amount in paise
+                    'speed' => 'normal', // Use 'instant' if supported
+                ]);
+
+            return response()->json([
+                'status' => 'success',
+                'refund' => [
+                    'id' => $refund->id,
+                    'amount' => $refund->amount,
+                    'currency' => $refund->currency,
+                    'payment_id' => $refund->payment_id,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Razorpay refund failed: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'error' => 'Refund initiation failed: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }

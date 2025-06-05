@@ -111,17 +111,21 @@
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://yourdomain.com/images/flight-banner.jpg" alt="Flight Banner">
+                   <div class="title">Next Gen Trip</div>
         </div>
         <div class="content">
             <div class="title">Flight Booking Confirmation</div>
             <div class="subtitle">{{ isset($bookingData['Segments'][0]['Origin']['DepTime']) ? \Carbon\Carbon::parse($bookingData['Segments'][0]['Origin']['DepTime'])->format('M d, Y') : 'N/A' }}</div>
-
-            <a href="{{ $bookingData['manage_link'] ?? '#' }}" class="btn">Manage Your Trip</a>
-
-            <div class="trip-info">{{ $bookingData['Origin'] ?? 'N/A' }} → {{ $bookingData['Destination'] ?? 'N/A' }}</div>
-            <div class="subtitle">{{ $bookingData['Origin'] ?? 'N/A' }} to {{ $bookingData['Destination'] ?? 'N/A' }}</div>
-
+                <div class="trip-info">
+                    {{ $bookingData['Segments'][0]['Origin']['Airport']['CityCode'] ?? 'N/A' }} → 
+                    {{ $bookingData['Segments'][0]['Destination']['Airport']['CityCode'] ?? 'N/A' }}
+                </div>
+            <div class="subtitle">
+                {{ $bookingData['Segments'][0]['Origin']['Airport']['CityName'] ?? 'N/A' }} 
+                (Terminal {{ $bookingData['Segments'][0]['Origin']['Airport']['Terminal'] ?? 'N/A' }}) to 
+                {{ $bookingData['Segments'][0]['Destination']['Airport']['CityName'] ?? 'N/A' }} 
+                (Terminal {{ $bookingData['Segments'][0]['Destination']['Airport']['Terminal'] ?? 'N/A' }})
+            </div>
             @foreach ($bookingData['Segments'] as $index => $segment)
                 <table class="info-table">
                     <tr>
@@ -134,11 +138,11 @@
                     </tr>
                     <tr>
                         <td class="label">Departure:</td>
-                        <td>{{ isset($segment['Origin']['DepTime']) ? \Carbon\Carbon::parse($segment['Origin']['DepTime'])->format('M d, Y H:i') : 'N/A' }}</td>
+                        <td> {{ $segment['Origin']['Airport']['CityName'] ?? 'N/A' }}  ,  {{ isset($segment['Origin']['DepTime']) ? \Carbon\Carbon::parse($segment['Origin']['DepTime'])->format('M d, Y H:i') : 'N/A' }} , Terminal  {{ $segment['Origin']['Airport']['Terminal'] ?? 'N/A' }}  </td>
                     </tr>
                     <tr>
                         <td class="label">Arrival:</td>
-                        <td>{{ isset($segment['Destination']['ArrTime']) ? \Carbon\Carbon::parse($segment['Destination']['ArrTime'])->format('M d, Y H:i') : 'N/A' }}</td>
+                       <td> {{ $segment['Destination']['Airport']['CityName'] ?? 'N/A' }}  ,  {{ isset($segment['Destination']['ArrTime']) ? \Carbon\Carbon::parse($segment['Destination']['ArrTime'])->format('M d, Y H:i') : 'N/A' }} , Terminal  {{ $segment['Destination']['Airport']['Terminal'] ?? 'N/A' }}  </td>
                     </tr>
                     <tr>
                         <td class="label">Duration:</td>
@@ -200,13 +204,12 @@
                 <p><strong>Total:</strong> {{ $invoiceData['Currency'] ?? 'USD' }} {{ number_format($invoiceData['InvoiceAmount'] ?? 0, 2) }}</p>
             </div>
 
-            <a href="{{ $bookingData['download_link'] ?? '#' }}" class="btn">Download Ticket</a>
-            <a href="{{ $bookingData['change_link'] ?? '#' }}" class="btn">Make Changes</a>
+           
         </div>
 
         <div class="footer">
-            <div>Additional Services</div>
-            <div class="services">
+
+            <!-- <div class="services">
                 <div>
                     <img src="https://yourdomain.com/icons/hotel.png" alt="Hotel"><br>Hotels
                 </div>
@@ -219,7 +222,7 @@
                 <div>
                     <img src="https://yourdomain.com/icons/food.png" alt="Breakfast"><br>Breakfast
                 </div>
-            </div>
+            </div> -->
             <div>Need help? Contact us at <a href="mailto:info@nextgentrip.com">info@nextgentrip.com</a></div>
         </div>
     </div>
