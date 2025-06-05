@@ -17,7 +17,7 @@ use App\Models\RazorpayOrder;
 use App\Mail\BookingConfirmationMail;
 use Illuminate\Support\Facades\Log;
 
-
+use Illuminate\Support\Facades\DB;
 class FlightController extends Controller
 {
     protected $apiService;
@@ -69,14 +69,14 @@ class FlightController extends Controller
     
         // Send API Request
         $response = Http::timeout(100)->withHeaders([])->post(
-            'https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/Search',
+            'http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Search',
             $searchPayload
         );
     
         if ($response->json('Response.Error.ErrorCode') === 6) {
             $token = $this->apiService->authenticate();
             $response = Http::timeout(90)->withHeaders([])->post(
-                'https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/Search',
+                'http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Search',
                 $searchPayload
             );
         }
@@ -827,28 +827,81 @@ class FlightController extends Controller
         }
     }
 
-    public function getBookingDetails(Request $request)
+   public function getBookingDetails(Request $request)
     {
         try {
             $token = $this->apiService->getToken();
 
-            // Validate the request data
-            $validatedData = $request->validate([
-                'EndUserIp' => 'required|string|ip', // Ensures valid IP address
-                'TraceId' => 'required|string',
-            
-                'PNR' => 'required|string',
-                'BookingId' => 'required|integer',
+            // Define validation rules
+            $rules = [
+                'EndUserIp' => 'required|string|ip',
+                'TraceId' => 'nullable|string',
+                'PNR' => 'nullable|string',
+                'BookingId' => 'nullable|integer|min:1',
+                'FirstName' => 'nullable|string',
+                'LastName' => 'nullable|string',
+            ];
+
+            // Custom validation to ensure at least one of BookingId, PNR, or TraceId is provided
+            $validator = Validator::make($request->all(), $rules, [], [
+                'EndUserIp' => 'End User IP',
+                'TraceId' => 'Trace ID',
+                'PNR' => 'PNR',
+                'BookingId' => 'Booking ID',
+                'FirstName' => 'First Name',
+                'LastName' => 'Last Name',
             ]);
 
-            // Prepare the payload
+            // Add custom validation for required fields based on request cases
+            $validator->after(function ($validator) use ($request) {
+                $data = $request->all();
+                
+                // Check if at least one of BookingId, PNR, or TraceId is provided
+                if (empty($data['BookingId']) && empty($data['PNR']) && empty($data['TraceId'])) {
+                    $validator->errors()->add('BookingId', 'At least one of BookingId, PNR, or TraceId is required.');
+                }
+
+                // For cases involving PNR with FirstName and/or LastName (cases 3, 4, 5)
+                if (!empty($data['PNR']) && (isset($data['FirstName']) || isset($data['LastName']))) {
+                    if (empty($data['FirstName']) || empty($data['LastName'])) {
+                        $validator->errors()->add('FirstName', 'Both FirstName and LastName are required when PNR is provided with either.');
+                        $validator->errors()->add('LastName', 'Both FirstName and LastName are required when PNR is provided with either.');
+                    }
+                }
+            });
+
+            // Return validation errors if validation fails
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            // Prepare the payload based on provided inputs
+            $validatedData = $validator->validated();
             $payload = [
                 'EndUserIp' => $validatedData['EndUserIp'],
-                'TraceId' => $validatedData['TraceId'],
-                'TokenId' => $token, // Use fetched token initially
-                'PNR' => $validatedData['PNR'],
-                'BookingId' => $validatedData['BookingId'],
+                'TokenId' => $token,
             ];
+
+            // Add fields to payload based on request case
+            if (!empty($validatedData['TraceId'])) {
+                $payload['TraceId'] = $validatedData['TraceId'];
+            }
+            if (!empty($validatedData['PNR'])) {
+                $payload['PNR'] = $validatedData['PNR'];
+            }
+            if (!empty($validatedData['BookingId'])) {
+                $payload['BookingId'] = $validatedData['BookingId'];
+            }
+            if (!empty($validatedData['FirstName'])) {
+                $payload['FirstName'] = $validatedData['FirstName'];
+            }
+            if (!empty($validatedData['LastName'])) {
+                $payload['LastName'] = $validatedData['LastName'];
+            }
 
             // Make the API request
             $response = Http::timeout(100)->post(
@@ -883,17 +936,6 @@ class FlightController extends Controller
 
             $bookingResponse = $response->json('Response');
 
-            // Optionally store booking details (if you have a model)
-            /* Uncomment if you have a BookingDetails model
-            BookingDetails::create([
-                'token' => $token,
-                'trace_id' => $validatedData['TraceId'],
-                'user_ip' => $validatedData['EndUserIp'],
-                'pnr' => $bookingResponse['FlightItinerary']['PNR'],
-                'booking_id' => $bookingResponse['FlightItinerary']['BookingId'],
-            ]);
-            */
-
             return response()->json([
                 'status' => 'success',
                 'data' => $bookingResponse,
@@ -907,6 +949,11 @@ class FlightController extends Controller
                 'errors' => $e->errors(),
             ], 422);
         } catch (\Illuminate\Http\Client\RequestException $e) {
+            Log::error('Booking Details API Request Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all(),
+            ]);
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'API request timeout or connection error',
@@ -925,7 +972,6 @@ class FlightController extends Controller
             ], 500);
         }
     }
-
     public function sendBookingConfirmationEmail(Request $request)
 {
     try {
@@ -1307,6 +1353,210 @@ class FlightController extends Controller
         return $response;
     }
 
+
+   public function cancelTicket(Request $request)
+    {
+        try {
+            // Validate the request data
+            $validatedData = $request->validate([
+                'BookingId' => 'required|string',
+                'PNR' => 'required|string|alpha_num',
+                'EndUserIp' => 'required|ip',
+                'Remarks' => 'required|string|max:255',
+            ]);
+
+            // Get token from ApiService
+            $token = $this->apiService->getToken();
+            if (!$token) {
+                throw new \Exception('Failed to retrieve valid token from ApiService.');
+            }
+
+            // Prepare the payload for the cancellation request
+            $payload = [
+                'BookingId' => $validatedData['BookingId'],
+                'RequestType' => 1, // Cancellation request
+                'CancellationType' => 0, // Full cancellation
+                'Remarks' => $validatedData['Remarks'],
+                'EndUserIp' => $validatedData['EndUserIp'],
+                'TokenId' => $token,
+            ];
+
+            // Log the request payload
+            Log::debug('CancelTicket Request Payload', [
+                'payload' => $payload,
+                'request' => $request->all(),
+            ]);
+
+            // Make the API request to TekTravels for cancellation
+            $response = Http::timeout(100)->post(
+                'http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/GetBookingDetails',
+                $payload
+            );
+
+            // Log the raw response
+            Log::debug('CancelTicket Raw Response', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            // Check if the request failed
+            if ($response->failed()) {
+                throw new \Exception('API request failed with status ' . $response->status() . ': ' . $response->body());
+            }
+
+            $responseData = $response->json();
+
+            // Log the parsed JSON response
+            Log::debug('CancelTicket Parsed Response', [
+                'response' => $responseData,
+            ]);
+
+            // Handle token expiration
+            if (isset($responseData['Response']['Error']['ErrorCode']) && $responseData['Response']['Error']['ErrorCode'] === 6) {
+                Log::info('Token expired, refreshing token.');
+                $token = $this->apiService->authenticate();
+                if (!$token) {
+                    throw new \Exception('Failed to refresh token from ApiService.');
+                }
+                $payload['TokenId'] = $token;
+
+                // Retry the request
+                $response = Http::timeout(90)->post(
+                    'http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/GetBookingDetails',
+                    $payload
+                );
+
+                // Log the retry response
+                Log::debug('CancelTicket Retry Raw Response', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+
+                if ($response->failed()) {
+                    throw new \Exception('Retry API request failed with status ' . $response->status() . ': ' . $response->body());
+                }
+                $responseData = $response->json();
+
+                Log::debug('CancelTicket Retry Parsed Response', [
+                    'response' => $responseData,
+                ]);
+            }
+
+            // Check response status and handle errors
+            if (!isset($responseData['Response']['ResponseStatus']) || $responseData['Response']['ResponseStatus'] !== 1) {
+                $errorMessage = $responseData['Response']['SupplierErrorMsg'] ??
+                                $responseData['Response']['Error']['ErrorMessage'] ??
+                                json_encode($responseData['Response']['Error'] ?? 'Unknown error');
+                throw new \Exception('Failed to process cancellation: ' . $errorMessage);
+            }
+
+            // Update the Bookflights table to reflect cancellation
+            $booking = Bookflights::where('booking_id', $validatedData['BookingId'])
+                ->where('pnr', $validatedData['PNR'])
+                ->first();
+
+            if (!$booking) {
+                throw new \Exception('Booking not found in database.');
+            }
+
+            DB::beginTransaction();
+            try {
+                $booking->update([
+                    'status' => 'cancelled',
+                    'cancelled_at' => now(),
+                    'cancellation_remarks' => $validatedData['Remarks'],
+                ]);
+
+                // Initiate refund process (placeholder - implement your refund logic here)
+                $refundAmount = $this->calculateRefundAmount($responseData['Response']['FlightItinerary']);
+                $this->processRefund($booking, $refundAmount);
+
+                DB::commit();
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw new \Exception('Failed to update booking or process refund: ' . $e->getMessage());
+            }
+
+            // Log the successful cancellation
+            Log::info('Ticket cancellation successful', [
+                'BookingId' => $validatedData['BookingId'],
+                'PNR' => $validatedData['PNR'],
+                'response' => $responseData,
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $responseData['Response'],
+                'message' => 'Cancellation request processed successfully. Refund initiated.',
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::warning('CancelTicket Validation Error', [
+                'errors' => $e->errors(),
+                'request' => $request->all(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            Log::error('CancelTicket API Request Error', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'API request timeout or connection error',
+                'error' => $e->getMessage(),
+            ], 503);
+        } catch (\Exception $e) {
+            Log::error('CancelTicket General Error', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An error occurred while processing the cancellation',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    private function calculateRefundAmount($flightItinerary)
+    {
+        // Extract fare details
+        $publishedFare = $flightItinerary['Fare']['PublishedFare'] ?? 0;
+        $taxes = $flightItinerary['Fare']['Tax'] ?? 0;
+        $cancellationCharges = 0; // Placeholder: Fetch actual cancellation charges from API if available
+
+        // As per fare rules, only statutory taxes are refundable for Saver fare
+        return $taxes; // Adjust based on actual cancellation charges if provided
+    }
+
+    private function processRefund($booking, $refundAmount)
+    {
+        // Placeholder for refund logic
+        // Implement your payment gateway integration here (e.g., Razorpay, Stripe)
+        // Example: Initiate refund via payment gateway API
+        Log::info('Refund initiated', [
+            'booking_id' => $booking->booking_id,
+            'pnr' => $booking->pnr,
+            'refund_amount' => $refundAmount,
+        ]);
+
+        // Update booking with refund details
+        $booking->update([
+            'refund_amount' => $refundAmount,
+            'refund_status' => 'initiated',
+            'refund_initiated_at' => now(),
+        ]);
+    }
 
 
      function farequate(Request  $request)

@@ -27,26 +27,50 @@ class MatrixController extends Controller
         ]);
 
         if (!empty($files)) {
-            foreach ($files as $file) {
-                $request->attach($file['name'], $file['contents'], $file['filename']);
-            }
             $request->withHeaders(['Content-Type' => 'multipart/form-data']);
+            foreach ($files as $file) {
+                if (isset($file['contents'])) {
+                    $request->attach($file['name'], $file['contents'], $file['filename']);
+                } else {
+                    $request->attach($file['name'], $file['value']);
+                }
+            }
         } elseif ($method === 'POST' && !empty($data)) {
-            $request->asJson()->withBody(json_encode($data), 'application/json');
+            $request->withHeaders(['Content-Type' => 'application/json']);
+            $request->withBody(json_encode($data), 'application/json');
         }
 
-        $response = $request->$method($this->baseUrl . '/reseller/matrix/' . $endpoint, $data);
+        try {
+            $response = $request->$method($this->baseUrl . '/reseller/matrix/' . $endpoint);
+            $responseData = $response->json();
 
-        return $response->json();
+            if ($response->status() !== 200 || !isset($responseData['status']) || $responseData['status'] === 0) {
+                return [
+                    'status' => 0,
+                    'message' => $responseData['message'] ?? 'API request failed',
+                    'data' => $responseData['data'] ?? [],
+                    'http_status' => $response->status(),
+                ];
+            }
+
+            return $responseData;
+        } catch (\Exception $e) {
+            return [
+                'status' => 0,
+                'message' => 'Something went wrong: ' . $e->getMessage(),
+                'data' => [],
+                'http_status' => 500,
+            ];
+        }
     }
 
     /**
-     * Get Countries
+     * Get Countries Covered
      */
     public function getCountries()
     {
         $response = $this->makeRequest('get', 'countries-covered');
-        return response()->json($response);
+        return response()->json($response, $response['http_status'] ?? 200);
     }
 
     /**
@@ -54,9 +78,49 @@ class MatrixController extends Controller
      */
     public function getPlans(Request $request)
     {
-        $country = $request->query('country_covered', 'Italy');
-        $response = $this->makeRequest('get', 'plans?country_covered=' . urlencode($country));
-        return response()->json($response);
+        $validator = Validator::make($request->all(), [
+            'country_covered' => 'sometimes|string',
+            'limit' => 'sometimes|integer|min:1',
+            'page_no' => 'sometimes|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $params = [];
+        if ($request->has('country_covered')) {
+            $params[] = 'country_covered=' . urlencode($request->query('country_covered'));
+        }
+        if ($request->has('limit')) {
+            $params[] = 'limit=' . $request->query('limit');
+        }
+        if ($request->has('page_no')) {
+            $params[] = 'page_no=' . $request->query('page_no');
+        }
+
+        $endpoint = 'plans' . (empty($params) ? '' : '?' . implode('&', $params));
+        $response = $this->makeRequest('get', $endpoint);
+
+        // Normalize response for frontend
+        if ($response['status'] === 1) {
+            $response['data'] = array_map(function ($plan) {
+                return [
+                    'id' => $plan['id'] ?? '',
+                    'planName' => $plan['planName'] ?? $plan['productName'] ?? '',
+                    'dataCapacity' => $plan['dataCapacity'] ?? 0,
+                    'dataCapacityUnit' => $plan['dataCapacityUnit'] ?? '',
+                    'validity' => $plan['validity'] ?? 0,
+                    'totalPrice' => $plan['totalPrice'] ?? 0,
+                    'currency' => $plan['currency'] ?? '',
+                    'coverages' => $plan['coverages'] ?? '',
+                    'isRechargeable' => $plan['isRechargeable'] ?? false,
+                    'description' => $plan['description'] ?? '',
+                ];
+            }, $response['data']);
+        }
+
+        return response()->json($response, $response['http_status'] ?? 200);
     }
 
     /**
@@ -64,24 +128,24 @@ class MatrixController extends Controller
      */
     public function validateOrder(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'request' => 'required|array',
-            'request.*.id' => 'required|string',
-            'request.*.planName' => 'required|string',
-            'request.*.customerFirstName' => 'required|string',
-            'request.*.customerLastName' => 'required|string',
-            'request.*.customerDOB' => 'required|date_format:Y-m-d',
-            'request.*.customerPassportNo' => 'required|string',
-            'request.*.travelStartDate' => 'required|date_format:Y-m-d',
-            'request.*.travelEndDate' => 'required|date_format:Y-m-d',
-        ]);
+    $validator = Validator::make($request->all(), [
+    'request' => 'required|array|min:1',
+    'request.*.id' => 'required|string',
+    'request.*.planName' => 'required|string',
+    'request.*.customerFirstName' => 'required|string',
+    'request.*.customerLastName' => 'required|string',
+    'request.*.customerDOB' => 'required|date_format:Y-m-d',
+    'request.*.customerPassportNo' => 'required|string',
+    'request.*.travelStartDate' => 'required|date_format:Y-m-d|after_or_equal:today',
+    'request.*.travelEndDate' => 'required|date_format:Y-m-d|after_or_equal:request.*.travelStartDate',
+]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
         $response = $this->makeRequest('post', 'validate-order', $request->all());
-        return response()->json($response);
+        return response()->json($response, $response['http_status'] ?? 200);
     }
 
     /**
@@ -98,7 +162,14 @@ class MatrixController extends Controller
         }
 
         $response = $this->makeRequest('post', 'create-order', $request->all());
-        return response()->json($response);
+
+        // Normalize response for frontend
+        if ($response['status'] === 1 && isset($response['orderDetail'])) {
+            $response['orderNo'] = $response['orderId'] ?? '';
+            $response['simNo'] = $response['orderDetail'][0]['simNumber'] ?? '';
+        }
+
+        return response()->json($response, $response['http_status'] ?? 200);
     }
 
     /**
@@ -106,10 +177,30 @@ class MatrixController extends Controller
      */
     public function getOrders(Request $request)
     {
-        $limit = $request->query('limit', 10);
-        $page = $request->query('page_no', 1);
-        $response = $this->makeRequest('get', "get-orders?limit=$limit&page_no=$page");
-        return response()->json($response);
+        $validator = Validator::make($request->all(), [
+            'limit' => 'sometimes|integer|min:1',
+            'page_no' => 'sometimes|integer|min:1',
+            'order_id' => 'sometimes|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $params = [];
+        if ($request->has('limit')) {
+            $params[] = 'limit=' . $request->query('limit');
+        }
+        if ($request->has('page_no')) {
+            $params[] = 'page_no=' . $request->query('page_no');
+        }
+        if ($request->has('order_id')) {
+            $params[] = 'order_id=' . urlencode($request->query('order_id'));
+        }
+
+        $endpoint = 'get-orders' . (empty($params) ? '' : '?' . implode('&', $params));
+        $response = $this->makeRequest('get', $endpoint);
+        return response()->json($response, $response['http_status'] ?? 200);
     }
 
     /**
@@ -118,13 +209,15 @@ class MatrixController extends Controller
     public function uploadDocuments(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'passportF' => 'required|file|mimes:jpg,png,pdf',
-            'passportB' => 'required|file|mimes:jpg,png,pdf',
-            'visaCopy1' => 'required|file|mimes:jpg,png,pdf',
-            'eTicket1' => 'required|file|mimes:jpg,png,pdf',
-            'eTicket2' => 'required|file|mimes:jpg,png,pdf',
+            'passportF' => 'required|file|mimes:jpg,jpeg,png,pdf',
+            'passportB' => 'required|file|mimes:jpg,jpeg,png,pdf',
+            'visaCopy1' => 'nullable|file|mimes:jpg,jpeg,png,pdf',
+            'visaCopy2' => 'nullable|file|mimes:jpg,jpeg,png,pdf',
+            'eTicket1' => 'required|file|mimes:jpg,jpeg,png,pdf',
+            'eTicket2' => 'nullable|file|mimes:jpg,jpeg,png,pdf',
             'orderNo' => 'required|string',
             'simNo' => 'required|string',
+            'mobileNo' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -132,17 +225,24 @@ class MatrixController extends Controller
         }
 
         $files = [
-            ['name' => 'passportF', 'contents' => fopen($request->file('passportF')->path(), 'r'), 'filename' => $request->file('passportF')->getClientOriginalName()],
-            ['name' => 'passportB', 'contents' => fopen($request->file('passportB')->path(), 'r'), 'filename' => $request->file('passportB')->getClientOriginalName()],
-            ['name' => 'visaCopy1', 'contents' => fopen($request->file('visaCopy1')->path(), 'r'), 'filename' => $request->file('visaCopy1')->getClientOriginalName()],
-            ['name' => 'eTicket1', 'contents' => fopen($request->file('eTicket1')->path(), 'r'), 'filename' => $request->file('eTicket1')->getClientOriginalName()],
-            ['name' => 'eTicket2', 'contents' => fopen($request->file('eTicket2')->path(), 'r'), 'filename' => $request->file('eTicket2')->getClientOriginalName()],
-            ['name' => 'orderNo', 'contents' => $request->input('orderNo')],
-            ['name' => 'simNo', 'contents' => $request->input('simNo')],
+            ['name' => 'orderNo', 'value' => $request->input('orderNo')],
+            ['name' => 'simNo', 'value' => $request->input('simNo')],
+            ['name' => 'mobileNo', 'value' => $request->input('mobileNo')],
         ];
 
+        foreach (['passportF', 'passportB', 'visaCopy1', 'visaCopy2', 'eTicket1', 'eTicket2'] as $fileField) {
+            if ($request->hasFile($fileField)) {
+                $file = $request->file($fileField);
+                $files[] = [
+                    'name' => $fileField,
+                    'contents' => fopen($file->path(), 'r'),
+                    'filename' => $file->getClientOriginalName(),
+                ];
+            }
+        }
+
         $response = $this->makeRequest('post', 'upload-documents', [], $files);
-        return response()->json($response);
+        return response()->json($response, $response['http_status'] ?? 200);
     }
 
     /**
@@ -150,8 +250,8 @@ class MatrixController extends Controller
      */
     public function getWalletBalance()
     {
-        $response = $this->makeRequest('get', 'wallet-balance');
-        return response()->json($response);
+        $response = $this->makeRequest('get', 'get-balance');
+        return response()->json($response, $response['http_status'] ?? 200);
     }
 
     /**
@@ -159,9 +259,17 @@ class MatrixController extends Controller
      */
     public function getMobileUsage(Request $request)
     {
-        $simNo = $request->query('simNo', '999999999999999');
-        $response = $this->makeRequest('get', "get-mobile-usage?simNo=$simNo");
-        return response()->json($response);
+        $validator = Validator::make($request->all(), [
+            'simNo' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $endpoint = 'get-mobile-usage?simNo=' . urlencode($request->query('simNo'));
+        $response = $this->makeRequest('get', $endpoint);
+        return response()->json($response, $response['http_status'] ?? 200);
     }
 
     /**
@@ -169,9 +277,17 @@ class MatrixController extends Controller
      */
     public function getRechargePlans(Request $request)
     {
-        $simNo = $request->query('simNo', '999999999999999');
-        $response = $this->makeRequest('get', "get-recharge-plans?simNo=$simNo");
-        return response()->json($response);
+        $validator = Validator::make($request->all(), [
+            'simNo' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $endpoint = 'get-recharge-plans?simNo=' . urlencode($request->query('simNo'));
+        $response = $this->makeRequest('get', $endpoint);
+        return response()->json($response, $response['http_status'] ?? 200);
     }
 
     /**
@@ -189,7 +305,7 @@ class MatrixController extends Controller
         }
 
         $response = $this->makeRequest('post', 'create-recharge', $request->all());
-        return response()->json($response);
+        return response()->json($response, $response['http_status'] ?? 200);
     }
 
     /**
@@ -197,8 +313,16 @@ class MatrixController extends Controller
      */
     public function getSimInstallationStatus(Request $request)
     {
-        $simNo = $request->query('simNo', '999999999999999');
-        $response = $this->makeRequest('get', "get-sim-installation-status?simNo=$simNo");
-        return response()->json($response);
+        $validator = Validator::make($request->all(), [
+            'simNo' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $endpoint = 'get-sim-installation-status?simNo=' . urlencode($request->query('simNo'));
+        $response = $this->makeRequest('get', $endpoint);
+        return response()->json($response, $response['http_status'] ?? 200);
     }
 }

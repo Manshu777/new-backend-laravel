@@ -55,6 +55,12 @@ class Bookflights extends Model
 'commission_earned',
         'segments',
 
+        'cancelled_at',
+                'cancellation_remarks',
+                'refund_amount',
+                'refund_status',
+                'refund_initiated_at'
+
     ];
     
 
