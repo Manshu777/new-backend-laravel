@@ -13,10 +13,63 @@ use App\Models\TBOHotelCode;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\HotelBookingConfirmation;
+use GuzzleHttp\Pool;
+use GuzzleHttp\Psr7\Request as GuzzleRequest;
+use GuzzleHttp\Exception\RequestException;
 
 use Illuminate\Support\Facades\Log;
 class HotelControllerSearchRes extends Controller
 {
+
+    public function getCountries(Request $request)
+{
+    // API endpoint
+    $apiUrl = 'http://api.tbotechnology.in/TBOHolidays_HotelAPI/CountryList';
+
+    $username = 'TBOStaticAPITest';
+    $password = 'Tbo@11530818'; 
+
+    try {
+        // Make the API request using Laravel's HTTP client
+        $response = Http::withBasicAuth($username, $password)
+            ->get($apiUrl);
+
+        // Check if the request was successful
+        if ($response->successful()) {
+            $data = $response->json();
+
+            $countries = isset($data['CountryList']) ? $data['CountryList'] : [];
+
+            // Corrected mapping here:
+            $formattedCountries = array_filter(array_map(function ($country) {
+                if (!isset($country['Code'], $country['Name'])) {
+                    return null;
+                }
+                return [
+                    'Code' => $country['Code'],
+                    'Name' => $country['Name']
+                ];
+            }, $countries));
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $formattedCountries
+            ], 200);
+        } else {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to fetch countries from TBO API'
+            ], 500);
+        }
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'An error occurred: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+
 
 
 
@@ -33,25 +86,9 @@ class HotelControllerSearchRes extends Controller
             'guestNationality' => 'required|string',
         ]);
 
-        $hotelresult = [];
 
-        // Check database for valid hotel data (within 15 days)
-        $dbHotels = HotelData::where('city_code', $validated['cityCode'])
-            ->where('created_at', '>=', Carbon::now()->subDays(15))
-            ->get();
 
-        if ($dbHotels->isNotEmpty()) {
-            foreach ($dbHotels as $hotel) {
-                $hotelresult[] = [
-                    'hotelDetails' => $hotel->hotel_details,
-                    'searchResults' => $hotel->search_results,
-                ];
-            }
-
-            return response()->json([
-                'totalHotels' => $hotelresult,
-            ]);
-        }
+       
 
         // Check TBOHotelCode table for valid hotel codes (within 15 days)
         $dbHotelCodes = TBOHotelCode::where('city_code', $validated['cityCode'])
@@ -72,7 +109,7 @@ class HotelControllerSearchRes extends Controller
                     "IsDetailedResponse" => true,
                 ]
             ]);
-            $executionTime = (microtime(true) - $startTime) * 1000; // Convert to milliseconds
+            $executionTime = (microtime(true) - $startTime) * 1000; 
             Log::info('HotelCodeList API Request', [
                 'cityCode' => $validated['cityCode'],
                 'executionTimeMs' => $executionTime,
@@ -111,7 +148,7 @@ class HotelControllerSearchRes extends Controller
             $hotelCodes = array_column($hotels, 'HotelCode');
         }
 
-        $hotelCodes = array_slice($hotelCodes, 0, 1000); // Limit to 1000 hotel codes for processing
+        $hotelCodes = array_slice($hotelCodes, 0, 1000); 
         if (empty($hotelCodes)) {
             return response()->json([
                 'message' => 'No hotels available',
@@ -141,7 +178,7 @@ class HotelControllerSearchRes extends Controller
                     "IsDetailedResponse" => true,
                     "Filters" => [
                         "Refundable" => false,
-                        "NoOfRooms" => 1,
+                        "NoOfRooms" => 0,
                         "MealType" => 0,
                         "OrderBy" => 0,
                         "StarRating" => 0,
@@ -375,18 +412,18 @@ class HotelControllerSearchRes extends Controller
                 'NetAmount' => 'required|numeric|min:0',
                 'HotelRoomsDetails' => 'required|array|min:1',
                 'HotelRoomsDetails.*.HotelPassenger' => 'required|array|min:1',
-                'HotelRoomsDetails.*.HotelPassenger.*.Title' => 'required|string|in:Mr.,Mrs.,Miss.,Master.',
+                'HotelRoomsDetails.*.HotelPassenger.*.Title' => 'required|string',
                 'HotelRoomsDetails.*.HotelPassenger.*.FirstName' => 'required|string|max:255',
                 'HotelRoomsDetails.*.HotelPassenger.*.MiddleName' => 'nullable|string|max:255',
                 'HotelRoomsDetails.*.HotelPassenger.*.LastName' => 'required|string|max:255',
                 'HotelRoomsDetails.*.HotelPassenger.*.Email' => 'required|email|max:255',
                 'HotelRoomsDetails.*.HotelPassenger.*.PaxType' => 'required|integer|in:1,2',
                 'HotelRoomsDetails.*.HotelPassenger.*.LeadPassenger' => 'required|boolean',
-                'HotelRoomsDetails.*.HotelPassenger.*.Age' => 'required|integer|min:0',
+                'HotelRoomsDetails.*.HotelPassenger.*.Age' => 'nullable',
                 'HotelRoomsDetails.*.HotelPassenger.*.Phoneno' => 'required|numeric|digits_between:10,15',
                 'HotelRoomsDetails.*.HotelPassenger.*.PassportNo' => 'nullable|string|max:50',
-                'HotelRoomsDetails.*.HotelPassenger.*.PassportIssueDate' => 'nullable|date',
-                'HotelRoomsDetails.*.HotelPassenger.*.PassportExpDate' => 'nullable|date|after:PassportIssueDate',
+                'HotelRoomsDetails.*.HotelPassenger.*.PassportIssueDate' => 'nullable',
+                'HotelRoomsDetails.*.HotelPassenger.*.PassportExpDate' => 'nullable',
                 'HotelRoomsDetails.*.HotelPassenger.*.PaxId' => 'nullable|integer|min:0',
                 'HotelRoomsDetails.*.HotelPassenger.*.PAN' => 'nullable|string|regex:/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/',
                 'HotelRoomsDetails.*.HotelPassenger.*.RoomIndex' => 'nullable|integer|min:1',

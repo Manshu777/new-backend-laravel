@@ -86,7 +86,7 @@ Route::prefix('v1/matrix')->group(function () {
     Route::post('/validate-order', [MatrixController::class, 'validateOrder']);
 
 
-    Route::post('/create-order', [MatrixController::class, 'createOrder']);
+    Route::post('/create-order', [MatrixController::class, 'createOrdermatrix']);
 
 
     Route::get('/orders', [MatrixController::class, 'getOrders']);
@@ -296,7 +296,7 @@ Route::post("v1/user/sendotp", [OtpController::class, "sendOtp"]);
 Route::post("v1/user/verifyotp", [OtpController::class, "verifyOtp"]);
 Route::post("v1/user/forgotPassword", [OtpController::class, "forgotPasswordSendotp"]);
 //getCancellationCharges
-
+Route::get('v1/countries', [HotelControllerSearchRes::class, 'getCountries']);
 // Route::post('v1/flight-cancel-charges', [FlightController::class, 'getCancellationCharges']);
 Route::post("v1/user/signup", [SiteUser::class, "signupUser"]);
 Route::post("v1/user/verifyotp", [SiteUser::class, "verifyOtp"]);

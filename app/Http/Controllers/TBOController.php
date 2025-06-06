@@ -19,7 +19,10 @@ class TBOController extends Controller
     private $hotelApiUrl = "http://api.tbotechnology.in/TBOHolidays_HotelAPI/TBOHotelCodeList";
     private $hoteldetalapi = "https://affiliate.tektravels.com/HotelAPI/Search";
     // Method to fetch cities
-  public function fetchCities(Request $request)
+
+
+
+    public function fetchCities(Request $request)
 {
     $request->validate([
         'CountryCode' => 'required|string|max:2',
@@ -27,6 +30,9 @@ class TBOController extends Controller
     ]);
 
     try {
+        // Normalize search query
+        $search = $request->query('search') ? strtolower(trim($request->query('search'))) : null;
+
         // Check for valid data in the database (within 15 days)
         $validCities = HotelCity::where('country_code', $request->CountryCode)
             ->where('created_at', '>=', Carbon::now()->subDays(15))
@@ -34,25 +40,8 @@ class TBOController extends Controller
 
         // If valid data exists, use it
         if ($validCities->isNotEmpty()) {
-            $cities = $validCities->map(function ($city) {
-                return [
-                    'Code' => $city->code,
-                    'Name' => $city->name,
-                ];
-            })->toArray();
-
-            // Apply search filter if provided
-            $search = $request->query('search');
-            if ($search) {
-                $search = strtolower($search);
-                $filteredCities = array_filter($cities, function ($city) use ($search) {
-                    return strpos(strtolower($city['Name']), $search) !== false;
-                });
-                return response()->json(array_values($filteredCities), 200);
-            }
-
-            // Return the first 20 cities if no search query
-            return response()->json(array_slice($cities, 0, 20), 200);
+            $cities = $this->filterCities($validCities, $search);
+            return response()->json($cities, 200);
         }
 
         // No valid data or data expired, fetch from API
@@ -75,7 +64,7 @@ class TBOController extends Controller
                 ], 500);
             }
 
-            // Get existing city codes from the database for the given country code
+            // Get existing city codes from the database
             $existingCityCodes = HotelCity::where('country_code', $request->CountryCode)
                 ->pluck('code')
                 ->toArray();
@@ -83,7 +72,6 @@ class TBOController extends Controller
             // Process and save new cities
             foreach ($apiCities as $apiCity) {
                 if (!in_array($apiCity['Code'], $existingCityCodes)) {
-                    // Add new city if code doesn't exist
                     HotelCity::create([
                         'code' => $apiCity['Code'],
                         'name' => $apiCity['Name'],
@@ -91,38 +79,20 @@ class TBOController extends Controller
                         'created_at' => Carbon::now(),
                         'updated_at' => Carbon::now(),
                     ]);
-        
-
-                    // Update existing city codes array
                     $existingCityCodes[] = $apiCity['Code'];
                 }
             }
 
             // Retrieve all cities from the database after updating
-            $cities = HotelCity::where('country_code', $request->CountryCode)
-                ->where('created_at', '>=', Carbon::now()->subDays(15))
-                ->get()
-                ->map(function ($city) {
-                    return [
-                        'Code' => $city->code,
-                        'Name' => $city->name,
-                    ];
-                })->toArray();
+            $cities = $this->filterCities(
+                HotelCity::where('country_code', $request->CountryCode)
+                    ->where('created_at', '>=', Carbon::now()->subDays(15))
+                    ->get(),
+                $search
+            );
 
-            // Apply search filter if provided
-            $search = $request->query('search');
-            if ($search) {
-                $search = strtolower($search);
-                $filteredCities = array_filter($cities, function ($city) use ($search) {
-                    return strpos(strtolower($city['Name']), $search) !== false;
-                });
-                return response()->json(array_values($filteredCities), 200);
-            }
-
-            // Return the first 20 cities if no search query
-            return response()->json(array_slice($cities, 0, 20), 200);
+            return response()->json($cities, 200);
         } else {
-            // Handle unsuccessful responses
             return response()->json([
                 'error' => 'Failed to fetch cities',
                 'message' => $response->json() ?? 'No response body found',
@@ -139,6 +109,34 @@ class TBOController extends Controller
             'message' => $e->getMessage(),
         ], 500);
     }
+}
+
+/**
+ * Filter cities based on search query and limit results
+ *
+ * @param \Illuminate\Database\Eloquent\Collection $cities
+ * @param string|null $search
+ * @return array
+ */
+private function filterCities($cities, $search = null)
+{
+    $mappedCities = $cities->map(function ($city) {
+        return [
+            'Code' => $city->code,
+            'Name' => $city->name,
+        ];
+    })->toArray();
+
+    // Apply search filter if provided
+    if ($search) {
+        $filteredCities = array_filter($mappedCities, function ($city) use ($search) {
+            return strpos(strtolower($city['Name']), $search) !== false;
+        });
+        return array_values($filteredCities);
+    }
+
+    // Return the first 20 cities if no search query
+    return array_slice($mappedCities, 0, 20);
 }
 
 

@@ -557,14 +557,17 @@ class FlightController extends Controller
     }
 
 
-    public function getCancellationCharges(Request $request)
-    {
+  public function getCancellationCharges(Request $request)
+{
+    try {
+        // Fetch token
+        $token = $this->apiService->getToken();
+
         // Validation rules
         $validator = Validator::make($request->all(), [
             'BookingId' => 'required|string',
             'RequestType' => 'required|in:1,2',
             'EndUserIp' => 'required|ip',
-            'TokenId' => 'required|string',
         ]);
 
         // Return validation errors if validation fails
@@ -576,33 +579,101 @@ class FlightController extends Controller
             ], 422);
         }
 
-        $apiUrl = "https://booking.travelboutiqueonline.com/AirAPI_V10/AirService.svc/GetCancellationCharges";
+        $apiUrl = "http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/GetCancellationCharges";
 
         // Get validated request data
-        $requestData = $validator->validated();
+        $requestData = array_merge($validator->validated(), ['TokenId' => $token]);
 
         // API request using Laravel HTTP Client
-        $response = Http::post($apiUrl, $requestData);
+        $response = Http::timeout(90)->post($apiUrl, $requestData);
 
         if ($response->successful()) {
             $data = $response->json();
 
-            return response()->json([
+            // Check API response status
+            if ($data['Response']['ResponseStatus'] !== 1) {
+                return response()->json([
+                    'status' => false,
+                    'message' => $data['Response']['Error']['ErrorMessage'] ?? 'Failed to fetch cancellation charges',
+                ], 400);
+            }
+
+            // Prepare response data
+            $cancellationData = [
                 'status' => $data['Response']['ResponseStatus'] ?? 'N/A',
                 'trace_id' => $data['Response']['TraceId'] ?? 'N/A',
-                'cancellation_charge' => $data['Response']['CancellationCharge'] ?? 'N/A',
-                'refund_amount' => $data['Response']['RefundAmount'] ?? 'N/A',
-                'currency' => $data['Response']['Currency'] ?? 'N/A',
+                'cancellation_charge' => $data['Response']['CancellationCharge'] ?? 0,
+                'refund_amount' => $data['Response']['RefundAmount'] ?? 0,
+                'currency' => $data['Response']['Currency'] ?? 'INR',
                 'gst' => $data['Response']['GST'] ?? [],
-                'cancel_charge_details' => $data['Response']['CancelChargeDetails'] ?? null
+                'cancel_charge_details' => $data['Response']['CancelChargeDetails'] ?? null,
+            ];
+
+            // Update Bookflights with cancellation details
+            Bookflights::where('booking_id', $requestData['BookingId'])->update([
+                'cancellation_charge' => $cancellationData['cancellation_charge'],
+                'refund_amount' => $cancellationData['refund_amount'],
+                'currency' => $cancellationData['currency'],
+    
             ]);
+
+            return response()->json($cancellationData);
         } else {
+            // Handle token expiration
+            if ($response->json('Response.Error.ErrorCode') === 6) {
+                $token = $this->apiService->authenticate();
+                $requestData['TokenId'] = $token;
+                $response = Http::timeout(90)->post($apiUrl, $requestData);
+
+                if ($response->successful()) {
+                    $data = $response->json();
+                    if ($data['Response']['ResponseStatus'] !== 1) {
+                        return response()->json([
+                            'status' => false,
+                            'message' => $data['Response']['Error']['ErrorMessage'] ?? 'Failed to fetch cancellation charges after token refresh',
+                        ], 400);
+                    }
+
+                    $cancellationData = [
+                        'status' => $data['Response']['ResponseStatus'] ?? 'N/A',
+                        'trace_id' => $data['Response']['TraceId'] ?? 'N/A',
+                        'cancellation_charge' => $data['Response']['CancellationCharge'] ?? 0,
+                        'refund_amount' => $data['Response']['RefundAmount'] ?? 0,
+                        'currency' => $data['Response']['Currency'] ?? 'INR',
+                        'gst' => $data['Response']['GST'] ?? [],
+                        'cancel_charge_details' => $data['Response']['CancelChargeDetails'] ?? null,
+                    ];
+
+                    // Update Bookflights with cancellation details
+                    Bookflights::where('booking_id', $requestData['BookingId'])->update([
+                        'cancellation_charge' => $cancellationData['cancellation_charge'],
+                        'refund_amount' => $cancellationData['refund_amount'],
+                        'currency' => $cancellationData['currency'],
+                        'cancellation_trace_id' => $cancellationData['trace_id'],
+                    ]);
+
+                    return response()->json($cancellationData);
+                }
+            }
+
             return response()->json([
                 'status' => false,
-                'message' => 'Failed to fetch data from the API',
+                'message' => 'Failed to fetch data from the API: ' . $response->body(),
             ], 500);
         }
+    } catch (\Exception $e) {
+        Log::error('Cancellation Charges Error: ' . $e->getMessage(), [
+            'trace' => $e->getTraceAsString(),
+            'request' => $request->all(),
+        ]);
+
+        return response()->json([
+            'status' => false,
+            'message' => 'An error occurred while fetching cancellation charges',
+            'error' => $e->getMessage(),
+        ], 500);
     }
+}
 
 
    
@@ -746,6 +817,8 @@ class FlightController extends Controller
                 'trace_id' => $validatedData['TraceId'],
                 'user_ip' => $validatedData['EndUserIp'],
                 'user_id' => $validatedData['user_id'],
+                'user_number' => $validatedData['Passengers'][0]['ContactNo'],
+                'user_name' => $validatedData['email'],
                 'pnr' => $bookingResponse['PNR'] ?? null,
                 'booking_id' => $bookingResponse['BookingId'] ?? null,
                 'flight_name' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['AirlineName'] ?? null,
@@ -755,8 +828,6 @@ class FlightController extends Controller
                     ? \Carbon\Carbon::parse($bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'])->toDateString()
                     : null,
                 'date_of_booking' => now(),
-                'username' => $validatedData['email'],
-                'user_name' => $validatedData['Passengers'][0]['FirstName'] . ' ' . $validatedData['Passengers'][0]['LastName'],
                 'phone_number' => $validatedData['Passengers'][0]['ContactNo'],
                 'airline_code' => $bookingResponse['FlightItinerary']['AirlineCode'] ?? null,
                 'flight_number' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['FlightNumber'] ?? null,

@@ -151,7 +151,7 @@ class MatrixController extends Controller
     /**
      * Create Order
      */
-    public function createOrder(Request $request)
+    public function createOrdermatrix(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'validatedOrderId' => 'required|string',
