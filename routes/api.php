@@ -274,7 +274,8 @@ Route::get('v1/transfers', [TransferController::class, 'getTransferData']);
 
 Route::get('v1/cab/countries', [CountryControllerCab::class, '']);
 Route::post('v1/destination-search-static-data', [TransferController::class, 'getDestinationSearchStaticData']);
-
+Route::get('v1/transfers', [TransferController::class, 'getTransfers']);
+Route::get('v1/destinations', [TransferController::class, 'getDestinations']);
 // Route::prefix('v1')->group(function () {
 //     Route::apiResource('hotelreg', HotelRegistrationController::class);
 // });
