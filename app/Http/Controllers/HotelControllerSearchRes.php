@@ -200,12 +200,7 @@ class HotelControllerSearchRes extends Controller
                 $startTime = microtime(true);
                 $searchResults = json_decode($response->getBody()->getContents(), true);
                 $executionTime = (microtime(true) - $startTime) * 1000; // Convert to milliseconds
-                Log::info('Hotel Search API Response for Chunk', [
-                    'chunkIndex' => $index,
-                    'hotelCodes' => implode(',', $hotelCodeChunks[$index]),
-                    'executionTimeMs' => $executionTime,
-                    'response' => $searchResults,
-                ]);
+             
 
                 // Check if the response indicates no available rooms globally
                 if (isset($searchResults['Status']['Code']) && $searchResults['Status']['Code'] === 201 && $searchResults['Status']['Description'] === "No Available rooms for given criteria") {
@@ -217,10 +212,7 @@ class HotelControllerSearchRes extends Controller
                 foreach ($hotels as $hotelResult) {
                     $hotelCode = $hotelResult['HotelCode'] ?? null;
                     if (!$hotelCode) {
-                        Log::warning('Missing HotelCode in search result', [
-                            'chunkIndex' => $index,
-                            'hotelResult' => $hotelResult,
-                        ]);
+                       
                         continue;
                     }
 
