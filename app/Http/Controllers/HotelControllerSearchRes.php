@@ -483,16 +483,16 @@ class HotelControllerSearchRes extends Controller
 
             // Save booking data to Bookedhotels table
             $bookedHotel = Bookedhotels::create([
-                'user_id' => '4', // Assuming authenticated user
+                'user_id' => auth()->id() ?? null, // Assuming authenticated user
                 'hotel_id' => $bookResult['HotelId'] ?? null, // Adjust based on actual response structure
                 'user_name' => $leadPassenger ? ($leadPassenger['Title'] . ' ' . $leadPassenger['FirstName'] . ' ' . $leadPassenger['LastName']) : null,
                 'user_number' => $leadPassenger['Phoneno'] ?? null,
                 'hotel_name' => $bookResult['HotelName'] ?? null, // Adjust based on actual response structure
                 'location' => $bookResult['Location'] ?? null, // Adjust based on actual response structure
                 'address' => $bookResult['Address'] ?? null, // Adjust based on actual response structure
-                'check_in_date' => $bookResult['CheckInDate'] ?? '22-01-2001', // Adjust based on actual response structure
-                'check_out_date' => $bookResult['CheckOutDate'] ?? '22-01-2001', // Adjust based on actual response structure
-                'room_type' => $bookResult['RoomType'] ?? 'eee', // Adjust based on actual response structure
+                'check_in_date' => $bookResult['CheckInDate'] ?? null, // Adjust based on actual response structure
+                'check_out_date' => $bookResult['CheckOutDate'] ?? null, // Adjust based on actual response structure
+                'room_type' => $bookResult['RoomType'] ?? null, // Adjust based on actual response structure
                 'price' => $validated['NetAmount'],
                 'date_of_booking' => now(),
                 'initial_response' => json_encode($responseData),
