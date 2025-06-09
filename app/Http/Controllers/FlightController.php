@@ -141,7 +141,8 @@ class FlightController extends Controller
     }
 
 
-    public function genrateTickBook(Request $request)
+
+  public function bookFlight(Request $request)
 {
     try {
         $token = $this->apiService->getToken();
@@ -149,12 +150,11 @@ class FlightController extends Controller
         // Log raw request data for debugging
         Log::info('Raw Request Data', ['data' => $request->all()]);
 
-        // Validate the request data
+        // Validate the request data, including Fare and root-level email
         $validatedData = $request->validate([
             'ResultIndex' => 'required|string',
             'Passengers' => 'required|array',
-            'email' => 'required|email',
-            'user_id' => 'required',
+            'email' => 'required|email', // Added validation for root-level email
             'Passengers.*.Title' => 'required|string',
             'Passengers.*.FirstName' => 'required|string',
             'Passengers.*.LastName' => 'required|string',
@@ -167,7 +167,7 @@ class FlightController extends Controller
             'Passengers.*.City' => 'required|string',
             'Passengers.*.CountryCode' => 'required|string',
             'Passengers.*.ContactNo' => 'required|string',
-            'Passengers.*.email' => 'required|email', // Updated to lowercase
+            'Passengers.*.Email' => 'required|email',
             'Passengers.*.IsLeadPax' => 'required|boolean',
             'Passengers.*.Fare' => 'required|array',
             'Passengers.*.Fare.Currency' => 'required|string',
@@ -200,7 +200,7 @@ class FlightController extends Controller
             "TraceId" => $validatedData['TraceId'],
         ];
 
-        // Loop through passengers
+        // Loop through each passenger and add their details, including Fare
         foreach ($validatedData['Passengers'] as $passenger) {
             $bookingPayload['Passengers'][] = [
                 "Title" => $passenger['Title'],
@@ -215,7 +215,7 @@ class FlightController extends Controller
                 "City" => $passenger['City'],
                 "CountryCode" => $passenger['CountryCode'],
                 "ContactNo" => $passenger['ContactNo'],
-                "Email" => $passenger['email'], // Updated to lowercase
+                "Email" => $passenger['Email'],
                 "IsLeadPax" => $passenger['IsLeadPax'],
                 "Fare" => [
                     "Currency" => $passenger['Fare']['Currency'],
@@ -237,7 +237,7 @@ class FlightController extends Controller
         }
 
         // Make the API request
-        $response = Http::timeout(100)->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Ticket', $bookingPayload);
+        $response = Http::timeout(100)->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Book', $bookingPayload);
 
         // Handle API errors
         if ($response->failed()) {
@@ -248,28 +248,16 @@ class FlightController extends Controller
         if ($response->json('Response.Error.ErrorCode') === 6) {
             $token = $this->apiService->authenticate();
             $bookingPayload['TokenId'] = $token;
-            $response = Http::timeout(90)->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Ticket', $bookingPayload);
+            $response = Http::timeout(90)->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Book', $bookingPayload);
 
             if ($response->failed()) {
                 throw new \Exception('Retry API request failed after token refresh: ' . $response->body());
             }
         }
 
-        // Check booking status
+        // Check if the booking was successful
         if ($response->json('Response.ResponseStatus') !== 1) {
             $errorMessage = $response->json('Response.Error.ErrorMessage') ?? 'Unknown error';
-
-            // Handle duplicate booking error
-            if (str_contains($errorMessage, 'Booking is already done for the same criteria')) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'This booking has already been processed with the same details.',
-                    'error' => $errorMessage,
-                    'action' => 'Please check your booking history or start a new search.',
-                    'pnr' => preg_match('/PNR (\w+)/', $errorMessage, $matches) ? $matches[1] : null,
-                ], 400);
-            }
-
             return response()->json([
                 'status' => 'error',
                 'message' => 'Booking failed',
@@ -281,39 +269,55 @@ class FlightController extends Controller
 
         Log::info('Booking Response', ['data' => $bookingResponse]);
 
-        // Determine the email to use
-        $userEmail = $validatedData['email'] ?? $validatedData['Passengers'][0]['email'] ?? null;
-        if (!$userEmail) {
-            throw new \Exception('No valid email provided for booking.');
-        }
-
         // Store booking details
         Bookflights::create([
             'token' => $token,
             'trace_id' => $validatedData['TraceId'],
             'user_ip' => $validatedData['EndUserIp'],
-            'user_id' => $validatedData['user_id'],
-            'user_number' => $validatedData['Passengers'][0]['ContactNo'],
-            'user_name' => $userEmail, // Use the fallback email
             'pnr' => $bookingResponse['PNR'] ?? null,
             'booking_id' => $bookingResponse['BookingId'] ?? null,
-            'flight_name' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['AirlineName'] ?? null,
-            'departure_from' => $bookingResponse['FlightItinerary']['Segments'][0]['Origin']['CityName'] ?? null,
-            'arrival_to' => $bookingResponse['FlightItinerary']['Segments'][0]['Destination']['CityName'] ?? null,
-            'flight_date' => isset($bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'])
-                ? \Carbon\Carbon::parse($bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'])->toDateString()
-                : null,
-            'date_of_booking' => now(),
+            'username' => $validatedData['email'], // Use validated root-level email
+            'user_name' => $validatedData['Passengers'][0]['FirstName'] . ' ' . $validatedData['Passengers'][0]['LastName'],
             'phone_number' => $validatedData['Passengers'][0]['ContactNo'],
-            'airline_code' => $bookingResponse['FlightItinerary']['AirlineCode'] ?? null,
-            'flight_number' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['FlightNumber'] ?? null,
-            'departure_time' => $bookingResponse['FlightItinerary']['Segments'][0]['Origin']['DepTime'] ?? null,
-            'arrival_time' => $bookingResponse['FlightItinerary']['Segments'][0]['Destination']['ArrTime'] ?? null,
-            'duration' => $bookingResponse['FlightItinerary']['Segments'][0]['Duration'] ?? null,
-            'commission_earned' => $bookingResponse['FlightItinerary']['Fare']['CommissionEarned'] ?? 0.0,
-            'segments' => $bookingResponse['FlightItinerary']['Segments'] ?? [],
         ]);
 
+        // Prepare invoice data
+        $invoiceData = [
+            'InvoiceNo' => $bookingResponse['FlightItinerary']['InvoiceNo'] ?? 'N/A',
+            'InvoiceAmount' => $bookingResponse['FlightItinerary']['InvoiceAmount'] ?? 0,
+            'InvoiceCreatedOn' => $bookingResponse['FlightItinerary']['InvoiceCreatedOn'] ?? 'N/A',
+            'Currency' => $bookingResponse['FlightItinerary']['Fare']['Currency'] ?? 'INR',
+            'BaseFare' => $bookingResponse['FlightItinerary']['Fare']['BaseFare'] ?? 0,
+            'Tax' => $bookingResponse['FlightItinerary']['Fare']['Tax'] ?? 0,
+            'OtherCharges' => $bookingResponse['FlightItinerary']['Fare']['OtherCharges'] ?? 0,
+        ];
+
+        $passengerData = $bookingResponse['FlightItinerary']['Passenger'] ?? [];
+
+        // Prepare ticket data (fix response paths)
+        $ticket = [
+            'pnr' => $bookingResponse['PNR'] ?? 'N/A',
+            'booking_id' => $bookingResponse['BookingId'] ?? 'N/A',
+            'user_name' => $validatedData['Passengers'][0]['FirstName'] . ' ' . $validatedData['Passengers'][0]['LastName'],
+            'username' => $validatedData['Passengers'][0]['Email'], // Use passenger Email
+            'phone_number' => $validatedData['Passengers'][0]['ContactNo'],
+            'issued_date' => now()->format('d F Y'),
+            'flight_name' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['AirlineName'] ?? 'N/A', // Fixed path
+            'flight_number' => $bookingResponse['FlightItinerary']['Segments'][0]['Airline']['FlightNumber'] ?? 'N/A', // Fixed path
+            'arrival_to' => $bookingResponse['FlightItinerary']['Segments'][0]['Destination']['AirportName'] ?? 'N/A', // Fixed path
+            'departure_from' => $bookingResponse['FlightItinerary']['Segments'][0]['Origin']['AirportName'] ?? 'N/A', // Fixed path
+            'total_fare' => $bookingResponse['FlightItinerary']['Fare']['PublishedFare'] ?? 0, // Fixed path
+            'usd_amount' => $bookingResponse['FlightItinerary']['Fare']['OfferedFare'] ?? 0, // Fixed path
+            'conversion_rate' => 1,
+            'full_route' => ($bookingResponse['FlightItinerary']['Segments'][0]['Origin']['AirportName'] ?? 'N/A') . ' - ' . ($bookingResponse['FlightItinerary']['Segments'][0]['Destination']['AirportName'] ?? 'N/A'), // Fixed path
+            'flight_date' => isset($bookingResponse['FlightItinerary']['Segments'][0]['ArrTime'])
+                ? \Carbon\Carbon::parse($bookingResponse['FlightItinerary']['Segments'][0]['ArrTime'])->format('d F Y')
+                : 'N/A', // Fixed path
+            'date_of_booking' => now()->toDateString(),
+            'passengers' => $validatedData['Passengers'],
+        ];
+
+        // Prepare booking data for email
         $bookingData = [
             'PNR' => $bookingResponse['PNR'] ?? 'N/A',
             'BookingId' => $bookingResponse['BookingId'] ?? 'N/A',
@@ -327,20 +331,8 @@ class FlightController extends Controller
             'Segments' => $bookingResponse['FlightItinerary']['Segments'] ?? [],
         ];
 
-        $passengerData = $bookingResponse['FlightItinerary']['Passenger'] ?? [];
-
-        $invoiceData = [
-            'InvoiceNo' => $bookingResponse['FlightItinerary']['InvoiceNo'] ?? 'N/A',
-            'InvoiceAmount' => $bookingResponse['FlightItinerary']['InvoiceAmount'] ?? 0,
-            'InvoiceCreatedOn' => $bookingResponse['FlightItinerary']['InvoiceCreatedOn'] ?? 'N/A',
-            'Currency' => $bookingResponse['FlightItinerary']['Fare']['Currency'] ?? 'INR',
-            'BaseFare' => $bookingResponse['FlightItinerary']['Fare']['BaseFare'] ?? 0,
-            'Tax' => $bookingResponse['FlightItinerary']['Fare']['Tax'] ?? 0,
-            'OtherCharges' => $bookingResponse['FlightItinerary']['Fare']['OtherCharges'] ?? 0,
-        ];
-
         // Send email
-        Mail::to($userEmail)->send(new BookingConfirmationMail($bookingData, $passengerData, $invoiceData));
+        Mail::to($validatedData['email'])->send(new BookingConfirmationMail($bookingData, $passengerData, $invoiceData));
 
         return response()->json([
             'status' => 'success',
@@ -373,10 +365,6 @@ class FlightController extends Controller
         ], 500);
     }
 }
-
-
-
-   
 
     public function bookFlightold(Request $request)
     {
@@ -981,8 +969,8 @@ class FlightController extends Controller
             $rules = [
                 'EndUserIp' => 'string|ip',
                 'TraceId' => 'nullable|string',
-                'PNR' => 'required|string',
-                'BookingId' => 'required|integer|min:1',
+                'PNR' => '|string',
+                'BookingId' => 'nullable|integer|min:1',
                 'FirstName' => 'nullable|string',
                 'LastName' => 'nullable|string',
             ];
