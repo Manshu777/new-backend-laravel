@@ -53,10 +53,16 @@ class BookedhotelsResource extends Resource
                 Forms\Components\TextInput::make('room_type')
                     ->required()
                     ->maxLength(255),
+          
+
+
+             Forms\Components\TextInput::make('bookingId')
+                    ->required()
+          ,
+                    
                 Forms\Components\TextInput::make('price')
                     ->required()
-                    ->numeric()
-                    ->prefix('$'),
+                    ->numeric(),
                 Forms\Components\DateTimePicker::make('date_of_booking')
                     ->required(),
                 Forms\Components\Textarea::make('initial_response')
@@ -88,10 +94,13 @@ class BookedhotelsResource extends Resource
                 Tables\Columns\TextColumn::make('check_in_date')
                     ->date()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('check_out_date')
+                Tables\Columns\TextColumn::make('pnr')
                     ->date()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('room_type')
+
+                       // 'bookingId',
+        //'pnr',
+                Tables\Columns\TextColumn::make('bookingId')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('price')
                     ->money()

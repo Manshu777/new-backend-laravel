@@ -21,8 +21,8 @@ use App\Http\Controllers\TransferSearchController;
 use App\Http\Controllers\TicketBookingController;
 use App\Http\Controllers\RazorpayOrderController;
 use App\Http\Controllers\MatrixController;
-
-    
+use App\Http\Controllers\ChatController;
+use OpenAI\Laravel\Facades\OpenAI;
 use App\Http\Controllers\ApiController;
 use App\Http\Controllers\ImageController;
 
@@ -112,12 +112,31 @@ Route::prefix('v1/matrix')->group(function () {
 
 
 
+
+
+Route::post('v1/chat', [ChatController::class, 'chat']);
+
 Route::post('v1/flight-book-llc', [FlightController::class, 'genrateTickBook']);
 
 Route::post('v1/cancel-ticket', [FlightController::class, 'cancelTicket']);
 
 
 Route::post('v1/multi-city-fare', [MultiCityFareController::class, 'getMultiCityFare']);
+
+
+Route::get('/test-openai', function () {
+    try {
+        $response = OpenAI::chat()->create([
+            'model' => 'gpt-3.5-turbo',
+            'messages' => [
+                ['role' => 'user', 'content' => 'Hello, world!'],
+            ],
+        ]);
+        return response()->json(['message' => $response->choices[0]->message->content]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
 
 
 Route::post('/v1/flight-cancellation-charges', [FlightController::class, 'getCancellationCharges']);

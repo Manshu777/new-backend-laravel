@@ -37,6 +37,10 @@ class Bookedhotels extends Model
         'initial_response',
         'refund',
         'response',
+        'tokenid',
+        'traceid',
+        'bookingId',
+        'pnr',
     ];
 
     

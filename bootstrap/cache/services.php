@@ -52,11 +52,12 @@
     48 => 'Carbon\\Laravel\\ServiceProvider',
     49 => 'NunoMaduro\\Collision\\Adapters\\Laravel\\CollisionServiceProvider',
     50 => 'Termwind\\Laravel\\TermwindServiceProvider',
-    51 => 'Propaganistas\\LaravelPhone\\PhoneServiceProvider',
-    52 => 'RyanChandler\\BladeCaptureDirective\\BladeCaptureDirectiveServiceProvider',
-    53 => 'App\\Providers\\AppServiceProvider',
-    54 => 'App\\Providers\\Filament\\AdminPanelProvider',
-    55 => 'App\\Providers\\Filament\\HotelregPanelProvider',
+    51 => 'OpenAI\\Laravel\\ServiceProvider',
+    52 => 'Propaganistas\\LaravelPhone\\PhoneServiceProvider',
+    53 => 'RyanChandler\\BladeCaptureDirective\\BladeCaptureDirectiveServiceProvider',
+    54 => 'App\\Providers\\AppServiceProvider',
+    55 => 'App\\Providers\\Filament\\AdminPanelProvider',
+    56 => 'App\\Providers\\Filament\\HotelregPanelProvider',
   ),
   'eager' => 
   array (
@@ -256,6 +257,9 @@
     'Laravel\\Sail\\Console\\InstallCommand' => 'Laravel\\Sail\\SailServiceProvider',
     'Laravel\\Sail\\Console\\PublishCommand' => 'Laravel\\Sail\\SailServiceProvider',
     'command.tinker' => 'Laravel\\Tinker\\TinkerServiceProvider',
+    'OpenAI\\Client' => 'OpenAI\\Laravel\\ServiceProvider',
+    'OpenAI\\Contracts\\ClientContract' => 'OpenAI\\Laravel\\ServiceProvider',
+    'openai' => 'OpenAI\\Laravel\\ServiceProvider',
   ),
   'when' => 
   array (
@@ -302,6 +306,9 @@
     array (
     ),
     'Laravel\\Tinker\\TinkerServiceProvider' => 
+    array (
+    ),
+    'OpenAI\\Laravel\\ServiceProvider' => 
     array (
     ),
   ),

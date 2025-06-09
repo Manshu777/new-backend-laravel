@@ -16,7 +16,7 @@ use App\Mail\HotelBookingConfirmation;
 use GuzzleHttp\Pool;
 use GuzzleHttp\Psr7\Request as GuzzleRequest;
 use GuzzleHttp\Exception\RequestException;
-
+use App\Models\Bookedhotels;
 use Illuminate\Support\Facades\Log;
 class HotelControllerSearchRes extends Controller
 {
@@ -390,8 +390,9 @@ class HotelControllerSearchRes extends Controller
         return $response1;
     }
 
+   
 
-  public function bookHotel(Request $request)
+     public function bookHotel(Request $request)
     {
         try {
             // Validate the incoming request
@@ -426,6 +427,7 @@ class HotelControllerSearchRes extends Controller
                 'HotelRoomsDetails.*.HotelPassenger.*.GSTCompanyEmail' => 'nullable|email|max:255',
                 'ArrivalTransport' => 'nullable',
                 'TraceId' => 'nullable|string|max:255',
+                'TokenId' => 'nullable|string|max:255', // Added TokenId validation
             ]);
 
             // Prepare the payload
@@ -467,31 +469,55 @@ class HotelControllerSearchRes extends Controller
                 throw new \Exception('API error: ' . $errorMessage);
             }
 
-            // Prepare booking details for email and PDF
-            $bookingDetails = array_merge($payload, $responseData['BookResult']);
-
-            // Generate PDF
-            $pdf = PDF::loadView('pdf.booking_confirmationhotel', ['bookingDetails' => $bookingDetails]);
-            $pdfPath = storage_path('app/public/booking_confirmation_' . $bookingDetails['BookingId'] . '.pdf');
-            $pdf->save($pdfPath);
-
-            // Find lead passenger's email
-            $leadPassengerEmail = null;
-            foreach ($bookingDetails['HotelRoomsDetails'] as $room) {
+            // Extract booking details
+            $bookResult = $responseData['BookResult'] ?? [];
+            $leadPassenger = null;
+            foreach ($validated['HotelRoomsDetails'] as $room) {
                 foreach ($room['HotelPassenger'] as $passenger) {
                     if ($passenger['LeadPassenger']) {
-                        $leadPassengerEmail = $passenger['Email'];
+                        $leadPassenger = $passenger;
                         break 2;
                     }
                 }
             }
 
+            // Save booking data to Bookedhotels table
+            $bookedHotel = Bookedhotels::create([
+                'user_id' => '4', // Assuming authenticated user
+                'hotel_id' => $bookResult['HotelId'] ?? null, // Adjust based on actual response structure
+                'user_name' => $leadPassenger ? ($leadPassenger['Title'] . ' ' . $leadPassenger['FirstName'] . ' ' . $leadPassenger['LastName']) : null,
+                'user_number' => $leadPassenger['Phoneno'] ?? null,
+                'hotel_name' => $bookResult['HotelName'] ?? null, // Adjust based on actual response structure
+                'location' => $bookResult['Location'] ?? null, // Adjust based on actual response structure
+                'address' => $bookResult['Address'] ?? null, // Adjust based on actual response structure
+                'check_in_date' => $bookResult['CheckInDate'] ?? '22-01-2001', // Adjust based on actual response structure
+                'check_out_date' => $bookResult['CheckOutDate'] ?? '22-01-2001', // Adjust based on actual response structure
+                'room_type' => $bookResult['RoomType'] ?? 'eee', // Adjust based on actual response structure
+                'price' => $validated['NetAmount'],
+                'date_of_booking' => now(),
+                'initial_response' => json_encode($responseData),
+                'refund' => false,
+                'response' => json_encode($bookResult),
+                'tokenid' => $validated['TokenId'] ?? null,
+                'traceid' => $validated['TraceId'] ?? null,
+                'bookingId' => $bookResult['BookingId'] ?? null, // Adjust based on actual response structure
+                'pnr' => $bookResult['PNR'] ?? null, // Adjust based on actual response structure
+            ]);
+
+            // Prepare booking details for email and PDF
+            $bookingDetails = array_merge($payload, $bookResult);
+
+            // Generate PDF
+            $pdf = PDF::loadView('pdf.booking_confirmationhotel', ['bookingDetails' => $bookingDetails]);
+            $pdfPath = storage_path('app/public/booking_confirmation_' . ($bookingDetails['BookingId'] ?? 'unknown') . '.pdf');
+            $pdf->save($pdfPath);
+
             // Send email with PDF attachment
-            if ($leadPassengerEmail) {
-                Mail::to($leadPassengerEmail)->send(new HotelBookingConfirmation($bookingDetails, $pdfPath));
+            if ($leadPassenger && $leadPassenger['Email']) {
+                Mail::to($leadPassenger['Email'])->send(new HotelBookingConfirmation($bookingDetails, $pdfPath));
                 unlink($pdfPath);
             } else {
-                \Log::warning('No lead passenger email found for booking ID: ' . $bookingDetails['BookingId']);
+                Log::warning('No lead passenger email found for booking ID: ' . ($bookingDetails['BookingId'] ?? 'unknown'));
             }
 
             // Return successful response
@@ -518,6 +544,7 @@ class HotelControllerSearchRes extends Controller
             ], 500);
         }
     }
+ 
 
 
 

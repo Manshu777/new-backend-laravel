@@ -905,10 +905,10 @@ class FlightController extends Controller
 
             // Define validation rules
             $rules = [
-                'EndUserIp' => 'required|string|ip',
+                'EndUserIp' => 'string|ip',
                 'TraceId' => 'nullable|string',
-                'PNR' => 'nullable|string',
-                'BookingId' => 'nullable|integer|min:1',
+                'PNR' => 'required|string',
+                'BookingId' => 'required|integer|min:1',
                 'FirstName' => 'nullable|string',
                 'LastName' => 'nullable|string',
             ];
