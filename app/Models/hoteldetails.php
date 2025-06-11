@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 
-class hoteldetails extends Model
+class Hoteldetails extends Model
 {
     use HasFactory;
 
