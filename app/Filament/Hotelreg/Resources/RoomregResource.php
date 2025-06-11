@@ -113,12 +113,12 @@ class RoomregResource extends Resource
 
     Forms\Components\Section::make('Room Description & Services')
         ->schema([
-            Forms\Components\TextArea::make('room_des')
+            Forms\Components\Textarea::make('room_des')
                 ->required()
                 ->label('Room Description')
                 ->placeholder('Describe the room in detail'),
 
-            Forms\Components\TextArea::make('additional_serv')
+            Forms\Components\Textarea::make('additional_serv')
                 ->label('Additional Services')
                 ->placeholder('Optional services offered with the room'),
         ]),
