@@ -82,7 +82,7 @@ class HotelControllerSearchRes extends Controller
             'adults' => 'required|integer|min:1',
             'children' => 'required|integer|min:0',
             'childrenAges' => 'nullable|array',
-            'childrenAges.*' => 'nullable|integer|min:0|max:17',
+            'childrenAges.*' => 'nullable|integer|min:0|max:18',
             'guestNationality' => 'required|string',
         ]);
 
@@ -371,7 +371,7 @@ class HotelControllerSearchRes extends Controller
     }
 
 
-    public   function preBooking(Request $request)
+    public  function preBooking(Request $request)
               {
         $validated = $request->validate([
             'BookingCode' => 'required',
@@ -412,8 +412,8 @@ class HotelControllerSearchRes extends Controller
                 'HotelRoomsDetails.*.HotelPassenger.*.Email' => 'required|email|max:255',
                 'HotelRoomsDetails.*.HotelPassenger.*.PaxType' => 'required|integer|in:1,2',
                 'HotelRoomsDetails.*.HotelPassenger.*.LeadPassenger' => 'required|boolean',
-                'HotelRoomsDetails.*.HotelPassenger.*.Age' => 'nullable',
-                'HotelRoomsDetails.*.HotelPassenger.*.Phoneno' => 'required|numeric|digits_between:10,15',
+                'HotelRoomsDetails.*.HotelPassenger.*.Age' => 'integer',
+                'HotelRoomsDetails.*.HotelPassenger.*.Phoneno' => 'nullable',
                 'HotelRoomsDetails.*.HotelPassenger.*.PassportNo' => 'nullable|string|max:50',
                 'HotelRoomsDetails.*.HotelPassenger.*.PassportIssueDate' => 'nullable',
                 'HotelRoomsDetails.*.HotelPassenger.*.PassportExpDate' => 'nullable',
@@ -446,6 +446,8 @@ class HotelControllerSearchRes extends Controller
             ];
 
             // Make the HTTP request
+            Log::info('Hotel Booking Payload:', $payload);
+
             $response = Http::withBasicAuth('Apkatrip', 'Apkatrip@1234')
                 ->timeout(30)
                 ->post('https://HotelBE.tektravels.com/hotelservice.svc/rest/book', $payload);
@@ -483,16 +485,16 @@ class HotelControllerSearchRes extends Controller
 
             // Save booking data to Bookedhotels table
             $bookedHotel = Bookedhotels::create([
-                'user_id' => auth()->id() ?? null, // Assuming authenticated user
+                'user_id' => '1',// Assuming authenticated user
                 'hotel_id' => $bookResult['HotelId'] ?? null, // Adjust based on actual response structure
                 'user_name' => $leadPassenger ? ($leadPassenger['Title'] . ' ' . $leadPassenger['FirstName'] . ' ' . $leadPassenger['LastName']) : null,
                 'user_number' => $leadPassenger['Phoneno'] ?? null,
                 'hotel_name' => $bookResult['HotelName'] ?? null, // Adjust based on actual response structure
                 'location' => $bookResult['Location'] ?? null, // Adjust based on actual response structure
                 'address' => $bookResult['Address'] ?? null, // Adjust based on actual response structure
-                'check_in_date' => $bookResult['CheckInDate'] ?? null, // Adjust based on actual response structure
-                'check_out_date' => $bookResult['CheckOutDate'] ?? null, // Adjust based on actual response structure
-                'room_type' => $bookResult['RoomType'] ?? null, // Adjust based on actual response structure
+                'check_in_date' => $bookResult['CheckInDate'] ?? '2025-09-22', // Adjust based on actual response structure
+                'check_out_date' => $bookResult['CheckOutDate'] ?? '2025-09-22', // Adjust based on actual response structure
+                'room_type' => $bookResult['RoomType'] ?? 'rfr', // Adjust based on actual response structure
                 'price' => $validated['NetAmount'],
                 'date_of_booking' => now(),
                 'initial_response' => json_encode($responseData),

@@ -31,7 +31,7 @@ use App\Http\Controllers\SliderController;
 use App\Http\Controllers\MultiCityFareController;
 use  App\Http\Controllers\OtpController;
 use  App\Http\Controllers\SiteUser;
-
+use App\Http\Controllers\TravelApplicationController;
 use App\Http\Controllers\InsuranceController;
 
 use App\Http\Controllers\CruiseController;
@@ -67,6 +67,8 @@ Route::post('v1/genrate-ticket', [FlightController::class, 'generateTicket']);
 Route::post('v1/get-calendar-fare', [FlightController::class, 'getCalendarFare']);
 
 
+
+Route::post('v1/travel-applications', [TravelApplicationController::class, 'store']);
 
 Route::get('/get-token', [ApiController::class, 'getToken']);
 
