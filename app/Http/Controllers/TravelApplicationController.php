@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Exception;
-
+use Illuminate\Support\Facades\Mail;
 class TravelApplicationController extends Controller
 {
     public function store(Request $request)
