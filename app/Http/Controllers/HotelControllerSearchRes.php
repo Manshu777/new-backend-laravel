@@ -22,52 +22,52 @@ class HotelControllerSearchRes extends Controller
 {
 
     public function getCountries(Request $request)
-{
-    // API endpoint
-    $apiUrl = 'http://api.tbotechnology.in/TBOHolidays_HotelAPI/CountryList';
+ {
+            // API endpoint
+            $apiUrl = 'http://api.tbotechnology.in/TBOHolidays_HotelAPI/CountryList';
 
-    $username = 'TBOStaticAPITest';
-    $password = 'Tbo@11530818'; 
+            $username = 'TBOStaticAPITest';
+            $password = 'Tbo@11530818'; 
 
-    try {
-        // Make the API request using Laravel's HTTP client
-        $response = Http::withBasicAuth($username, $password)
-            ->get($apiUrl);
+            try {
+                // Make the API request using Laravel's HTTP client
+                $response = Http::withBasicAuth($username, $password)
+                    ->get($apiUrl);
 
-        // Check if the request was successful
-        if ($response->successful()) {
-            $data = $response->json();
+                // Check if the request was successful
+                if ($response->successful()) {
+                    $data = $response->json();
 
-            $countries = isset($data['CountryList']) ? $data['CountryList'] : [];
+                    $countries = isset($data['CountryList']) ? $data['CountryList'] : [];
 
-            // Corrected mapping here:
-            $formattedCountries = array_filter(array_map(function ($country) {
-                if (!isset($country['Code'], $country['Name'])) {
-                    return null;
+                    // Corrected mapping here:
+                    $formattedCountries = array_filter(array_map(function ($country) {
+                        if (!isset($country['Code'], $country['Name'])) {
+                            return null;
+                        }
+                        return [
+                            'Code' => $country['Code'],
+                            'Name' => $country['Name']
+                        ];
+                    }, $countries));
+
+                    return response()->json([
+                        'status' => 'success',
+                        'data' => $formattedCountries
+                    ], 200);
+                } else {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Failed to fetch countries from TBO API'
+                    ], 500);
                 }
-                return [
-                    'Code' => $country['Code'],
-                    'Name' => $country['Name']
-                ];
-            }, $countries));
-
-            return response()->json([
-                'status' => 'success',
-                'data' => $formattedCountries
-            ], 200);
-        } else {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Failed to fetch countries from TBO API'
-            ], 500);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'An error occurred: ' . $e->getMessage()
+                ], 500);
+            }
         }
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => 'An error occurred: ' . $e->getMessage()
-        ], 500);
-    }
-}
 
 
 
@@ -313,29 +313,24 @@ class HotelControllerSearchRes extends Controller
     }
 
 
-   public function singleHotelget(Request $request)
-    {
-        $validated = $request->validate([
-            'HotelCode' => 'required|string',
-            'checkIn' => 'required|date',
-            'checkOut' => 'required|date',
-            'adults' => 'required|integer|min:1',
-            'children' => 'required|integer|min:0',
-            'guestNationality' => 'required|string',
+    public function singleHotelget(Request $request)
+{
+    $validated = $request->validate([
+        'HotelCode' => 'required|string',
+        'checkIn' => 'required|date',
+        'checkOut' => 'required|date',
+        'adults' => 'required|integer|min:1',
+        'children' => 'required|integer|min:0',
+        'guestNationality' => 'required|string',
+    ]);
 
-
-        ]);
-        $client = new \GuzzleHttp\Client();
-
-
+    try {
         $response1 = Http::withBasicAuth('TBOStaticAPITest', 'Tbo@11530818')->post('http://api.tbotechnology.in/TBOHolidays_HotelAPI/Hoteldetails', [
             "Hotelcodes" => $validated['HotelCode'],
             "Language" => "EN"
         ]);
 
         $response2 = Http::withBasicAuth('Apkatrip', 'Apkatrip@1234')->post('https://affiliate.tektravels.com/HotelAPI/Search', [
-
-
             "CheckIn" => $validated['checkIn'],
             "CheckOut" => $validated['checkOut'],
             "HotelCodes" => $validated['HotelCode'],
@@ -344,7 +339,7 @@ class HotelControllerSearchRes extends Controller
                 [
                     "Adults" => $validated['adults'],
                     "Children" => $validated['children'],
-                    "ChildrenAges" => $validated['children'] > 0 ? [null] : null
+                    "ChildrenAges" => $validated['children'] > 0 ? [] : null // Use empty array instead of [null]
                 ]
             ],
             "ResponseTime" => 23.0,
@@ -356,19 +351,34 @@ class HotelControllerSearchRes extends Controller
                 "OrderBy" => 0,
                 "StarRating" => 0,
                 "HotelName" => null
-
             ]
         ]);
-
-
 
         $resp1 = json_decode($response1->getBody()->getContents(), true);
         $resp2 = json_decode($response2->getBody()->getContents(), true);
 
-        $values = ["hoteldetail1" => $resp1['HotelDetails'], "hoteldetail2" => $resp2["HotelResult"]];
-        return response()->JSON($values);
+        // Debug: Log the full response to inspect its structure
+        \Log::info('API 2 Response', $resp2);
 
+        // Check if HotelResult exists
+        if (!isset($resp2['HotelResult'])) {
+            return response()->json([
+                'error' => 'HotelResult key missing in API response',
+                'response' => $resp2
+            ], 500);
+        }
+
+        $values = [
+            "hoteldetail1" => $resp1['HotelDetails'],
+            "hoteldetail2" => $resp2["HotelResult"]
+        ];
+
+        return response()->json($values);
+    } catch (\Exception $e) {
+        \Log::error('Error in singleHotelget: ' . $e->getMessage());
+        return response()->json(['error' => 'An error occurred while fetching hotel details'], 500);
     }
+}
 
 
     public  function preBooking(Request $request)

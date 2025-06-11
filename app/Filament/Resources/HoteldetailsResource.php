@@ -4,7 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\HoteldetailsResource\Pages;
 use App\Filament\Resources\HoteldetailsResource\RelationManagers;
-use App\Models\Hoteldetails;
+use App\Models\HotelDetails;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
