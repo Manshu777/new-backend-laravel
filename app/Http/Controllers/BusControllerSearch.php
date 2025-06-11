@@ -230,7 +230,9 @@ public function bookbus(Request $request)
 
         $bookbus = Http::timeout(90)->post('https://BusBE.tektravels.com/Busservice.svc/rest/Book', $searchData);
 
-        Log::info('Book Bus API Response:', $bookbus->json());
+        
+
+        Log::info('Book Bus Payload API Response:', $searchData);
 
         $errorCode = data_get($bookbus->json(), 'BookResult.Error.ErrorCode');
         $errorMessage = data_get($bookbus->json(), 'BookResult.Error.ErrorMessage');

@@ -31,6 +31,7 @@ class TravelApplicationController extends Controller
                 'city' => 'string',
                 'state' => 'string',
                 'pincode' => 'string|max:10',
+                'service_type'=> 'required|string',
                 'passport_front' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
                 'passport_back' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
                 'photograph' => 'nullable|file|mimes:jpg,jpeg,png|max:2048',
@@ -47,6 +48,7 @@ class TravelApplicationController extends Controller
                 }
             }
 
+            
             // Format dates to Carbon instances
             $data['tentative_departure_date'] = Carbon::createFromFormat('d/m/Y', $data['tentative_departure_date']);
 
@@ -67,6 +69,12 @@ class TravelApplicationController extends Controller
 
             // Merge paths into data
             $data = array_merge($data, $paths);
+
+
+            Mail::send('emails.travel_application', $emailData, function ($message) {
+                $message->to('vishal@nextgentrip.com')
+                        ->subject('New Travel Application Submission');
+            });
 
             // Store into DB
             $application = TravelApplication::create($data);
