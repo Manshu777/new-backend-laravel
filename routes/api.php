@@ -68,7 +68,7 @@ Route::post('v1/get-calendar-fare', [FlightController::class, 'getCalendarFare']
 
 
 
-Route::post('v1/travel-applications', [TravelApplicationController::class, 'store']);
+Route::post('me/travel-applications', [TravelApplicationController::class, 'store']);
 
 Route::get('/get-token', [ApiController::class, 'getToken']);
 
