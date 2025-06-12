@@ -1,0 +1,64 @@
+{
+    "ResultIndex": "OB1[TBO]aUH8Vefia4Gybj3l7dqkwmwhQutTPz9rEVQjf42cZ/Pi5R+jpborRXjVODOImXFcyY8jOWzR3xUP+DUac+gn+0eAN01JoqsZCRBRj1Co5bG5ONQv69A3gIWz+pikAov5/QPUmJpLL9/MQvLdE12qUruTpVGGSRUruizUmH2s9x8KjVx9NBu/82gE0kV0i0MCUMCwdORgpBUntlsDXtgEfEin7Iv80QY9ZBjCddSI6kYKFk5kuB6a3xEoAuMfoyl1mS712ePStVNvNe/Kv7VUYCbP7WcTX64iuB3wM54IYhUID6S2Y1seR3/Al4FPradtE4nVvmv+024tQ+6A7BT7+Q43vBuM8r1CjGs4MUo+ZVwVAom401ajnnqOpE1WahhnkRe6OaI4NbhYVVJfEVpkMN6fDv7SjdDbB3xEW2lJgyWiVKaBC7l5hsJwT6k0Yw0agIoELNVCRaxHji6hYIEjrdZ9VYNsubm2AdYZ0eIbUrFjk/eTTRHJO4hhY/DZAmmANJri6SBuJLaXayRwuwgbTMB36SYwXMnETat5A34PTC4=",
+    "Passengers": [
+        {
+            "Title": "Mr",
+            "FirstName": "manshu",
+            "LastName": "wfrw",
+            "PaxType": 1,
+            "DateOfBirth": "2001-09-22",
+            "Gender": 1,
+            "PassportNo": null,
+            "PassportExpiry": null,
+            "AddressLine1": "rf",
+            "City": "Ambala",
+            "CountryCode": "IN",
+            "ContactNo": "7988532993",
+            "Email": "manshu.developer@gmail.com",
+            "IsLeadPax": true,
+            "Fare": {
+                "Currency": "INR",
+                "BaseFare": 3974,
+                "Tax": 1062,
+                "YQTax": 0,
+                "AdditionalTxnFeePub": 0,
+                "AdditionalTxnFeeOfrd": 0,
+                "OtherCharges": 129.8,
+                "Discount": 0,
+                "PublishedFare": 5165.8,
+                "OfferedFare": 4349.29,
+                "TdsOnCommission": 117.31,
+                "TdsOnPLB": 100.64,
+                "TdsOnIncentive": 108.66,
+                "ServiceFee": 0
+            }
+        }
+    ],
+    "EndUserIp": "203.134.211.76",
+    "TokenId": "72c9b90d-cb1e-419d-a353-725b358f80e5",
+    "TraceId": "12b9b283-c29d-4eaf-af0d-3b28de4e6581"
+}
+
+
+
+{
+    "status": "success",
+    "data": {
+        "BookResult": {
+            "VoucherStatus": false,
+            "ResponseStatus": 3,
+            "Error": {
+                "ErrorCode": 3,
+                "ErrorMessage": "PAN is mandatory"
+            },
+            "TraceId": "4c5d5018-4770-11f0-abf2-4a224e7db70b",
+            "Status": 0,
+            "HotelBookingStatus": null,
+            "ConfirmationNo": null,
+            "BookingRefNo": null,
+            "BookingId": 0,
+            "IsPriceChanged": false,
+            "IsCancellationPolicyChanged": false
+        }
+    }
+}

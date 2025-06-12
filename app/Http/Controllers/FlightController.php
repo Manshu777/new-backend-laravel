@@ -830,7 +830,8 @@ class FlightController extends Controller
 
             // Make the API request
             $response = Http::timeout(100)->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Ticket', $bookingPayload);
-
+            Log::info('Booking Response', $bookingPayload);
+            
             // Handle API errors
             if ($response->failed()) {
                 throw new \Exception('Initial API request failed: ' . $response->body());
