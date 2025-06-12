@@ -33,9 +33,9 @@ use  App\Http\Controllers\OtpController;
 use  App\Http\Controllers\SiteUser;
 use App\Http\Controllers\TravelApplicationController;
 use App\Http\Controllers\InsuranceController;
-
+use App\Http\Controllers\WeddingEventController;
 use App\Http\Controllers\CruiseController;
-
+use App\Http\Controllers\WeddingJoinerController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\BookedhotelsController;
 
@@ -74,7 +74,9 @@ Route::get('/get-token', [ApiController::class, 'getToken']);
 
 Route::get('/test-ticket', [TicketBookingController::class, 'testTicketGeneration']);
 
+Route::post('v1/wedding-events', [WeddingEventController::class, 'store']);
 
+Route::post('v1/wedding-joiners', [WeddingJoinerController::class, 'store']);
 // genrateTickBook
 
 Route::prefix('v1/matrix')->group(function () {
