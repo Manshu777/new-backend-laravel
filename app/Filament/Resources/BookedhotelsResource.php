@@ -95,7 +95,6 @@ class BookedhotelsResource extends Resource
                     ->date()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('pnr')
-                    ->date()
                     ->sortable(),
 
                        // 'bookingId',

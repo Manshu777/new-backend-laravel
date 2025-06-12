@@ -144,6 +144,7 @@ Route::get('/test-openai', function () {
 Route::post('/v1/flight-cancellation-charges', [FlightController::class, 'getCancellationCharges']);
 Route::post('/v1/flight-send-change-request', [FlightController::class, 'sendChangeRequest']);
 
+Route::post('/v1/hotel-cancellation', [HotelControllerSearchRes::class, 'cancelHotelBooking']);
 
 Route::apiResource('v1/blog', BlogController::class);
 

@@ -14,6 +14,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\HotelBookingConfirmation;
 use GuzzleHttp\Pool;
+use App\Services\ApiService;
 use GuzzleHttp\Psr7\Request as GuzzleRequest;
 use GuzzleHttp\Exception\RequestException;
 use App\Models\Bookedhotels;
@@ -21,6 +22,11 @@ use Illuminate\Support\Facades\Log;
 class HotelControllerSearchRes extends Controller
 {
 
+    protected $apiService;
+     public function __construct(ApiService $apiService)
+    {
+        $this->apiService = $apiService;
+    }
     public function getCountries(Request $request)
  {
             // API endpoint
@@ -404,6 +410,7 @@ class HotelControllerSearchRes extends Controller
 
      public function bookHotel(Request $request)
     {
+        $token = $this->apiService->getToken();
         try {
             // Validate the incoming request
             $validated = $request->validate([
@@ -496,6 +503,7 @@ class HotelControllerSearchRes extends Controller
             // Save booking data to Bookedhotels table
             $bookedHotel = Bookedhotels::create([
                 'user_id' => '1',// Assuming authenticated user
+                 'enduserip' => $validated['EndUserIp'],
                 'hotel_id' => $bookResult['HotelId'] ?? null, // Adjust based on actual response structure
                 'user_name' => $leadPassenger ? ($leadPassenger['Title'] . ' ' . $leadPassenger['FirstName'] . ' ' . $leadPassenger['LastName']) : null,
                 'user_number' => $leadPassenger['Phoneno'] ?? null,
@@ -510,10 +518,10 @@ class HotelControllerSearchRes extends Controller
                 'initial_response' => json_encode($responseData),
                 'refund' => false,
                 'response' => json_encode($bookResult),
-                'tokenid' => $validated['TokenId'] ?? null,
-                'traceid' => $validated['TraceId'] ?? null,
+                'tokenid' =>  $token,
+                'traceid' => $bookResult['TraceId'] ?? null,
                 'bookingId' => $bookResult['BookingId'] ?? null, // Adjust based on actual response structure
-                'pnr' => $bookResult['PNR'] ?? null, // Adjust based on actual response structure
+                'pnr' => $bookResult['ConfirmationNo'] ?? null, // Adjust based on actual response structure
             ]);
 
             // Prepare booking details for email and PDF
@@ -561,26 +569,43 @@ class HotelControllerSearchRes extends Controller
 
 
 
-    public function getBookingDetail(Request $request)
-    {
-        // Validate request data
-        $validated = $request->validate([
-            'BookingId' => 'required|string',
-            'EndUserIp' => 'required|ip',
-            'TokenId' => 'required|string'
-        ]);
+  
 
-        // Send request to GetBookingDetail API
-        $response = Http::post('http://HotelBE.tektravels.com/internalhotelservice.svc/rest/GetBookingDetail', [
-            "BookingId" => $validated['BookingId'],
-            "EndUserIp" => $validated['EndUserIp'],
-            "TokenId" => $validated['TokenId']
-        ]);
+public function getBookingDetail(Request $request)
+{
+    // Validate only PNR input
+    $validated = $request->validate([
+        'pnr' => 'required|string',
+    ]);
 
-        // Decode API response
-        $responseData = json_decode($response->body(), true);
+    // Retrieve the booking from the database using PNR
+    $booking = Bookedhotels::where('pnr', $validated['pnr'])->first();
 
-        return response()->json($responseData);
+    if (!$booking) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'No booking found for the provided PNR.'
+        ], 404);
     }
+
+    // Prepare payload for API
+    $payload = [
+        'BookingId' => $booking->bookingId,
+        'TokenId' => $booking->tokenid,
+        'EndUserIp' => $booking->enduserip, // Hardcoded or default IP (required by API spec)
+    ];
+
+    // Call the GetBookingDetail API
+    $response = Http::withBasicAuth('Apkatrip', 'Apkatrip@1234')->post('http://HotelBE.tektravels.com/internalhotelservice.svc/rest/GetBookingDetail', $payload);
+
+    // Decode the API response
+    $responseData = json_decode($response->body(), true);
+
+    // Return response
+    return response()->json([
+        'status' => 'success',
+        'data' => $responseData,
+    ]);
+}
 
 }
