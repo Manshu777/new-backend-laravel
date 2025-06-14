@@ -9,13 +9,56 @@ use Illuminate\Support\Facades\Validator;
 
 class RazorpayOrderController extends Controller
 {
+
+
+    public function capturePayment(Request $request)
+{
+    $validator = Validator::make($request->all(), [
+        'payment_id' => 'required|string',
+        'amount' => 'required|numeric|min:100',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Validation failed',
+            'errors' => $validator->errors(),
+        ], 422);
+    }
+
+    try {
+        $api = new Api('rzp_test_Bi57EMsQ6K7ZZH', '0aDJHaixAC4Xd87EVU7Gx2zN');
+
+        $payment = $api->payment->fetch($request->payment_id);
+
+        $payment->capture(['amount' => intval(round($request->amount * 100))]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Payment captured successfully',
+        ], 200);
+
+    } catch (\Exception $e) {
+        Log::error('Razorpay capture failed: ' . $e->getMessage());
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Failed to capture payment',
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+}
+
+
+
     public function createOrder(Request $request)
     {
+        
         // Validate incoming request
         $validator = Validator::make($request->all(), [
             'amount' => 'required|numeric|min:100', 
             'currency' => 'required|string|in:INR',
             'receipt' => 'required|string|max:40', 
+         
         ]);
 
         if ($validator->fails()) {
@@ -35,7 +78,7 @@ class RazorpayOrderController extends Controller
                 'amount' => intval(round($request->amount * 100)),
                 'currency' => $request->currency,
                 'receipt' => $request->receipt,
-                'payment_capture' => 1, // Auto-capture payment
+                'payment_capture' => 0, // Auto-capture payment
             ];
 
             $order = $api->order->create($orderData);

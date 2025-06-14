@@ -306,9 +306,9 @@ Route::get('v1/destinations', [TransferController::class, 'getDestinations']);
 
 
 Route::post('v1/create-razorpay-order', [RazorpayOrderController::class, 'createOrder']);
-
+Route::post('v1/capture-razorpay-payment', [RazorpayOrderController::class, 'capturePayment']);
 Route::post('v1/send-booking-confirmation-email', [FlightController::class, 'sendBookingConfirmationEmail']);
-
+///v1/capture-razorpay-payment
 
 Route::post("v1/test", [HotelRegesController::class, "getHotelUser"]);
 Route::post("v1/hotelreq/signupHotel", [HotelRegesController::class, "sendVerify"]);
