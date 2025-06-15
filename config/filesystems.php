@@ -57,6 +57,12 @@ return [
             'throw' => false,
         ],
 
+        'visa' => [
+    'driver' => 'local',
+    'root' => storage_path('app/visa'),
+],
+
+
     ],
 
     /*

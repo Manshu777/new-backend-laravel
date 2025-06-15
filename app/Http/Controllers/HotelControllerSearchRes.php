@@ -345,7 +345,7 @@ class HotelControllerSearchRes extends Controller
                 [
                     "Adults" => $validated['adults'],
                     "Children" => $validated['children'],
-                    "ChildrenAges" => $validated['children'] > 0 ? [] : null // Use empty array instead of [null]
+                    "ChildrenAges" => $validated['children'] > 0 ? ($validated['childrenAges'] ?? array_fill(0, $validated['children'], null)) : null,
                 ]
             ],
             "ResponseTime" => 23.0,

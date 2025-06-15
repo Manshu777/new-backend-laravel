@@ -46,6 +46,7 @@ use App\Http\Controllers\SitelayoutController;
 use App\Http\Controllers\RazorpayControllerNew;
 use App\Mail\InsuranceBookingConfirmation;
 use Carbon\Carbon;
+use App\Http\Controllers\VisaInquiryController;
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
@@ -66,6 +67,11 @@ Route::post('v1/flight-book', [FlightController::class, 'bookFlight']);
 Route::post('v1/genrate-ticket', [FlightController::class, 'generateTicket']);
 Route::post('v1/get-calendar-fare', [FlightController::class, 'getCalendarFare']);
 
+
+// routes/api.php
+
+
+Route::post('/visa/inquiry', [VisaInquiryController::class, 'store']);
 
 
 Route::post('v1/travel-applications', [TravelApplicationController::class, 'store']);
