@@ -1590,7 +1590,7 @@ class FlightController extends Controller
 
         Log::info('Fare Rule Payload Input', ['data' => $validatedData]);
 
-        $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/rest/FareRule', $validatedData);
+        $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/FareRule', $validatedData);
 
         Log::info('Fare Rule Payload Output', ['data' => $response]);
         if ($response->json('Response.Error.ErrorCode') === 6) {
@@ -1598,7 +1598,7 @@ class FlightController extends Controller
             $token = $this->apiService->authenticate();
 
 
-            $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/rest/FareRule', $validatedData);
+            $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/FareRule', $validatedData);
         }
         return $response;
     }
@@ -1859,7 +1859,7 @@ class FlightController extends Controller
 
         Log::info('Fare Quote Payload Input', ['data' => $validatedData]);
 
-        $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/rest/FareQuote', $validatedData);
+        $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/FareQuote', $validatedData);
 
         Log::info('Fare Quote Payload Output', ['data' => $response]);
 
@@ -1868,7 +1868,7 @@ class FlightController extends Controller
             $token = $this->apiService->authenticate();
 
 
-            $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/rest/FareQuote', $validatedData);
+            $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/FareQuote', $validatedData);
         }
         return $response;
     }
