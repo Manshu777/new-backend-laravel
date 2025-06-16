@@ -195,7 +195,7 @@ class TransferController extends Controller
  
          // Step 5: Prepare API request
          $requestData = [
-             'ClientId' => config('services.tektravels.client_id_destination', 'ApiIntegrationNew'),
+             'ClientId' => config('services.tektravels.client_id_destination', 'tboprod'),
              'EndUserIp' => $request->ip(),
              'TokenId' => $token,
              'SearchType' => $validated['SearchType'],
