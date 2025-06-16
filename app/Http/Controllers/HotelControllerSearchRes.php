@@ -608,4 +608,64 @@ public function getBookingDetail(Request $request)
     ]);
 }
 
+
+public function cancelHotelBooking(Request $request)
+{
+    // Validate input parameters
+    $validated = $request->validate([
+        'BookingMode' => 'required|integer',
+        'ChangeRequestId' => 'required|integer',
+        'EndUserIp' => 'required|ip',
+        'TokenId' => 'required|string',
+        'BookingId' => 'required|integer',
+        'RequestType' => 'required|in:4', // Ensure RequestType is 4 (HotelCancel)
+        'Remarks' => 'required|string',
+    ]);
+
+    // Retrieve the booking from the database using BookingId
+    $booking = Bookedhotels::where('bookingId', $validated['BookingId'])
+                          ->where('tokenid', $validated['TokenId'])
+                          ->first();
+
+    if (!$booking) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'No booking found for the provided BookingId and TokenId.'
+        ], 404);
+    }
+
+    // Prepare payload for API
+    $payload = [
+        'BookingMode' => $validated['BookingMode'],
+        'ChangeRequestId' => $validated['ChangeRequestId'],
+        'EndUserIp' => $validated['EndUserIp'],
+        'TokenId' => $validated['TokenId'],
+        'BookingId' => $validated['BookingId'],
+        'RequestType' => $validated['RequestType'],
+        'Remarks' => $validated['Remarks'],
+    ];
+
+    // Call the CancelBooking API
+    $response = Http::withBasicAuth('Apkatrip', 'Apkatrip@1234')
+                    ->post('http://HotelBE.tektravels.com/internalhotelservice.svc/rest/CancelBooking', $payload);
+
+    // Decode the API response
+    $responseData = json_decode($response->body(), true);
+
+    // Check if API call was successful
+    if ($response->failed()) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Failed to process cancellation request.',
+            'error' => $responseData['Error'] ?? ['ErrorCode' => -1, 'ErrorMessage' => 'API request failed']
+        ], 500);
+    }
+
+    // Return response
+    return response()->json([
+        'status' => 'success',
+        'data' => $responseData,
+    ]);
+}
+
 }

@@ -14,7 +14,7 @@ class MatrixController extends Controller
     public function __construct()
     {
         $this->baseUrl = config('services.matrix.base_url', 'https://azcms.matrix.co.in');
-        $this->authToken = config('services.matrix.auth_token', 'b927c65283b74065a1d77e60c47356e0');
+        $this->authToken = config('services.matrix.auth_token','b927c65283b74065a1d77e60c47356e0');
     }
 
     /**
@@ -27,7 +27,6 @@ class MatrixController extends Controller
         ]);
 
         if (!empty($files)) {
-            $request->withHeaders(['Content-Type' => 'multipart/form-data']);
             foreach ($files as $file) {
                 if (isset($file['contents'])) {
                     $request->attach($file['name'], $file['contents'], $file['filename']);
@@ -36,8 +35,17 @@ class MatrixController extends Controller
                 }
             }
         } elseif ($method === 'POST' && !empty($data)) {
+            $jsonData = json_encode($data);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return [
+                    'status' => 0,
+                    'message' => 'JSON encoding failed: ' . json_last_error_msg(),
+                    'data' => [],
+                    'http_status' => 400,
+                ];
+            }
             $request->withHeaders(['Content-Type' => 'application/json']);
-            $request->withBody(json_encode($data), 'application/json');
+            $request->withBody($jsonData, 'application/json');
         }
 
         try {
@@ -128,17 +136,25 @@ class MatrixController extends Controller
      */
     public function validateOrder(Request $request)
     {
-    $validator = Validator::make($request->all(), [
-    'request' => 'required|array|min:1',
-    'request.*.id' => 'required|string',
-    'request.*.planName' => 'required|string',
-    'request.*.customerFirstName' => 'required|string',
-    'request.*.customerLastName' => 'required|string',
-    'request.*.customerDOB' => 'required|date_format:Y-m-d',
-    'request.*.customerPassportNo' => 'required|string',
-    'request.*.travelStartDate' => 'required|date_format:Y-m-d|after_or_equal:today',
-    'request.*.travelEndDate' => 'required|date_format:Y-m-d|after_or_equal:request.*.travelStartDate',
-]);
+        $validator = Validator::make($request->all(), [
+            'request' => 'required|array|min:1',
+            'request.*.id' => 'required|string',
+            'request.*.planName' => 'required|string',
+            'request.*.customerFirstName' => 'required|string',
+            'request.*.customerLastName' => 'required|string',
+            'request.*.customerDOB' => 'required|date_format:Y-m-d',
+            'request.*.customerPassportNo' => 'required|string',
+            'request.*.travelStartDate' => 'required|date_format:Y-m-d|after_or_equal:today',
+            'request.*.travelEndDate' => 'required|date_format:Y-m-d',
+        ], [
+            'request.*.travelEndDate.after_or_equal' => 'The travel end date must be on or after the travel start date.',
+        ]);
+
+        foreach ($request->input('request', []) as $index => $order) {
+            $validator->sometimes("request.$index.travelEndDate", 'after_or_equal:request.*.travelStartDate', function () use ($order) {
+                return isset($order['travelStartDate']);
+            });
+        }
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
@@ -151,7 +167,7 @@ class MatrixController extends Controller
     /**
      * Create Order
      */
-    public function createOrdermatrix(Request $request)
+    public function createOrder(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'validatedOrderId' => 'required|string',
@@ -164,7 +180,7 @@ class MatrixController extends Controller
         $response = $this->makeRequest('post', 'create-order', $request->all());
 
         // Normalize response for frontend
-        if ($response['status'] === 1 && isset($response['orderDetail'])) {
+        if ($response['status'] === 1 && isset($response['orderDetail']) && is_array($response['orderDetail']) && !empty($response['orderDetail'])) {
             $response['orderNo'] = $response['orderId'] ?? '';
             $response['simNo'] = $response['orderDetail'][0]['simNumber'] ?? '';
         }
@@ -235,7 +251,7 @@ class MatrixController extends Controller
                 $file = $request->file($fileField);
                 $files[] = [
                     'name' => $fileField,
-                    'contents' => fopen($file->path(), 'r'),
+                    'contents' => file_get_contents($file->path()),
                     'filename' => $file->getClientOriginalName(),
                 ];
             }
@@ -250,7 +266,7 @@ class MatrixController extends Controller
      */
     public function getWalletBalance()
     {
-        $response = $this->makeRequest('get', 'get-balance');
+        $response = $this->makeRequest('get', 'wallet-balance');
         return response()->json($response, $response['http_status'] ?? 200);
     }
 

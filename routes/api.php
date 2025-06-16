@@ -82,45 +82,23 @@ Route::get('/test-ticket', [TicketBookingController::class, 'testTicketGeneratio
 
 Route::post('v1/wedding-events', [WeddingEventController::class, 'store']);
 
-Route::post('v1/wedding-joiners', [WeddingJoinerController::class, 'store']);
+Route::post('v1/wedding-joiners', [Wedding\JoinerController::class, 'store']);
 // genrateTickBook
 
+
 Route::prefix('v1/matrix')->group(function () {
-
     Route::get('/countries', [MatrixController::class, 'getCountries']);
-
-
     Route::get('/plans', [MatrixController::class, 'getPlans']);
-
-  
     Route::post('/validate-order', [MatrixController::class, 'validateOrder']);
-
-
-    Route::post('/create-order', [MatrixController::class, 'createOrdermatrix']);
-
-
+    Route::post('/create-order', [MatrixController::class, 'createOrder']);
     Route::get('/orders', [MatrixController::class, 'getOrders']);
-
-
     Route::post('/upload-documents', [MatrixController::class, 'uploadDocuments']);
-
-    // Get Wallet Balance
     Route::get('/wallet-balance', [MatrixController::class, 'getWalletBalance']);
-
-
     Route::get('/mobile-usage', [MatrixController::class, 'getMobileUsage']);
-
-
     Route::get('/recharge-plans', [MatrixController::class, 'getRechargePlans']);
-
-
     Route::post('/create-recharge', [MatrixController::class, 'createRecharge']);
-
-
     Route::get('/sim-installation-status', [MatrixController::class, 'getSimInstallationStatus']);
 });
-
-
 
 
 
@@ -171,6 +149,8 @@ Route::post('v1/hotels/prebooking', [HotelControllerSearchRes::class, 'preBookin
 Route::post('v1/hotel/book', [HotelControllerSearchRes::class, 'bookHotel']);
 Route::post('v1/hotel/bookdetails', [HotelControllerSearchRes::class, 'getBookingDetail']);
 // routes/api.php
+Route::post('v1/hotel/cancel', [HotelControllerSearchRes::class, 'cancelHotelBooking']);
+
 
 
 Route::get('/test-flight', function () {
