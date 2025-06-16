@@ -60,7 +60,7 @@ class TransferController extends Controller
         try {
             // Make the API request with timeout
             $response = Http::timeout(15)->get(
-                config('services.tektravels.transfer_api_url', 'http://sharedapi.tektravels.com/staticdata.svc/rest/GetTransferStaticData'),
+                config('services.tektravels.transfer_api_url', 'https://api.travelboutiqueonline.com/TransferAPI_V10/TransferService.svc/GetTransferStaticData'),
                 $queryParams
             );
 

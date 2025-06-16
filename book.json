@@ -1,0 +1,45 @@
+{
+    "ResultIndex": "OB52[TBO]zWUvcyZngMA3g5LK/sTN5yfLCMmX4mwV/M/aIYYXQgvOzUpqX+MAwNzWeHdgatbHn6xUR27uJY4INYWVy38c1C6pzaSykN0RSIE0Rz8++NfDpx49anBauVfA8ylzok7LKBcGPUKBYhKrfQLeInIOx1usp9mCRXqoE5Ujiikyr0xoISFeDrU2fSZ3PRqI2WNu1JJNKjYfSxlE7BPm7GGH5FLgpwiRYRN78ZACNOXC8eH+wv0MAC2xT36fpdyln7o8u5sYAHdG34OXxsHvFC1+gcIS1csMLT89UsGeaVvnXbdvngy2KHNMQLW5Y4rwjCrsnD4IhfPtwOREuaNuAWHHAtakhtTVXcpUI8FMdGAeB6bro4C9Ha7aef/EUSOStzwmJVFnWgCcTOT5QN7Z6YOMbDWIeKK3taxkrd/Rznar1YLiuC58pGz4Gocml2alezfU6MS89Kz1ofM7EsjnliAwJS5ZRdIH10k3EmhKw7/gkwjwH9aqi0czLWl4Bp+7dTeGaAqqM+6hidq/itt6yJwdtA==",
+    "Passengers": [
+        {
+            "Title": "Mr",
+            "FirstName": "Manshu",
+            "LastName": "Manshu",
+            "PaxType": 1,
+            "DateOfBirth": "2001-09-22",
+            "Gender": 1,
+            "AddressLine1": "AMbala",
+            "City": "ambala",
+            "CountryCode": "IN",
+            "ContactNo": "7988532993",
+            "Email": "manshu.developer@gmail.com",
+            "IsLeadPax": true,
+            "Fare": {
+                "Currency": "INR",
+                "BaseFare": 3974,
+                "Tax": 1062,
+                "YQTax": 0,
+                "AdditionalTxnFeePub": 0,
+                "AdditionalTxnFeeOfrd": 0,
+                "OtherCharges": 129.8,
+                "Discount": 0,
+                "PublishedFare": 5165.8,
+                "OfferedFare": 4349.29,
+                "TdsOnCommission": 117.31,
+                "TdsOnPLB": 100.64,
+                "TdsOnIncentive": 108.66,
+                "ServiceFee": 0
+            }
+        }
+    ],
+    "EndUserIp": "203.134.211.76",
+    "TokenId": "e96a2e9b-69f4-45c5-a8ad-6c77ff179f50",
+    "TraceId": "598f391c-8ef5-4208-83cf-101b5f91b91c"
+} 
+
+
+  {
+    "data": {
+        "Illuminate\\Http\\Client\\Response": "{\"Response\":{\"B2B2BStatus\":false,\"Error\":{\"ErrorCode\":3,\"ErrorMessage\":\"Passport No can't be empty\"},\"ResponseStatus\":3,\"TraceId\":\"598f391c-8ef5-4208-83cf-101b5f91b91c\",\"Response\":null}}"
+    }
+}

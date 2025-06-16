@@ -69,7 +69,7 @@ class TransferSearchController extends Controller
 
         try {
             $response = Http::timeout(100)->post(
-                'https://TransferBE.tektravels.com/TransferService.svc/rest/Search',
+                'https://api.travelboutiqueonline.com/TransferAPI_V10/TransferService.svc/rest/Search',
                 $searchPayload
             );
 
@@ -80,7 +80,7 @@ class TransferSearchController extends Controller
                 $searchPayload['TokenId'] = $this->apiService->authenticate();
                 
                 $response = Http::timeout(100)->post(
-                    'https://TransferBE.tektravels.com/TransferService.svc/rest/Search',
+                    'https://api.travelboutiqueonline.com/TransferAPI_V10/TransferService.svc/rest/Search',
                     $searchPayload
                 );
                 
