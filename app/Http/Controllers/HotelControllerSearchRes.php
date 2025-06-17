@@ -503,7 +503,7 @@ class HotelControllerSearchRes extends Controller
             // Save booking data to Bookedhotels table
             $bookedHotel = Bookedhotels::create([
                 'user_id' => '1',// Assuming authenticated user
-                 'enduserip' => $validated['EndUserIp'],
+                'enduserip' => $validated['EndUserIp'],
                 'hotel_id' => $bookResult['HotelId'] ?? null, // Adjust based on actual response structure
                 'user_name' => $leadPassenger ? ($leadPassenger['Title'] . ' ' . $leadPassenger['FirstName'] . ' ' . $leadPassenger['LastName']) : null,
                 'user_number' => $leadPassenger['Phoneno'] ?? null,
@@ -595,6 +595,7 @@ public function getBookingDetail(Request $request)
         'EndUserIp' => $booking->enduserip, // Hardcoded or default IP (required by API spec)
     ];
 
+     Log::info('GetBookingDetail Payload Input', ['data' => $payload]);
     // Call the GetBookingDetail API
     $response = Http::withBasicAuth('Apkatrip', 'Apkatrip@1234')->post('http://HotelBE.tektravels.com/internalhotelservice.svc/rest/GetBookingDetail', $payload);
 

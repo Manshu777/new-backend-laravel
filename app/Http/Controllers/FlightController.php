@@ -25,15 +25,10 @@ class FlightController extends Controller
     {
         $this->apiService = $apiService;
     }
-
-
     public function searchFlights(Request $request)
     {
-        // Determine Markup dynamically
-        $Markup = true;
-
         $token = $this->apiService->getToken();
-
+    
         $validatedData = $request->validate([
             "EndUserIp" => 'required',
             'AdultCount' => 'required|integer',
@@ -48,16 +43,16 @@ class FlightController extends Controller
             'JourneyType' => 'required|integer',
             'PreferredAirlines' => 'nullable|string',
         ]);
-
+    
         // Prepare the search payload
         $searchPayload = [
             "EndUserIp" => $validatedData['EndUserIp'],
             "TokenId" => $token,
             "AdultCount" => $validatedData['AdultCount'],
-            "ChildCount" => $validatedData['ChildCount'] ?? 0,
-            "InfantCount" => $validatedData['InfantCount'] ?? 0,
-            "DirectFlight" => $validatedData['DirectFlight'] ?? false,
-            "OneStopFlight" => $validatedData['OneStopFlight'] ?? false,
+            "ChildCount" => $validatedData['ChildCount'],
+            "InfantCount" => $validatedData['InfantCount'],
+            "DirectFlight" => $validatedData['DirectFlight'],
+            "OneStopFlight" => $validatedData['OneStopFlight'],
             "JourneyType" => $validatedData['JourneyType'],
             "PreferredAirlines" => $validatedData['PreferredAirlines'],
             "Segments" => [
@@ -72,170 +67,43 @@ class FlightController extends Controller
             "Sources" => null,
         ];
 
-
-
-        // Send API Request to your API
+        Log::info('Search  Payload Input', ['data' => $searchPayload]);
+    
+        // Send API Request
         $response = Http::timeout(100)->withHeaders([])->post(
-            'https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/Search',
+            'http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Search',
             $searchPayload
         );
 
-
+        Log::info('Search  Response Output', ['data' => $response->json()]);
+    
         if ($response->json('Response.Error.ErrorCode') === 6) {
             $token = $this->apiService->authenticate();
             $response = Http::timeout(90)->withHeaders([])->post(
-                'https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/Search',
+                'http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Search',
                 $searchPayload
             );
         }
-
+    
         $results = $response->json();
-
-        // If Markup is true, compare with external API
-        if ($Markup) {
-            // Call external API
-            $externalApiUrl = 'https://api.flightapi.io/onewaytrip/684fe1a8be53fd20a09100fe' . env('FLIGHTAPI_KEY') . '/' .
-                $validatedData['Origin'] . '/' .
-                $validatedData['Destination'] . '/' .
-                date('Y-m-d', strtotime($validatedData['PreferredDepartureTime'])) . '/' .
-                $validatedData['AdultCount'] . '/' .
-                ($validatedData['ChildCount'] ?? 0) . '/' .
-                ($validatedData['InfantCount'] ?? 0) . '/Economy/INR';
-
-            try {
-                $externalResponse = Http::timeout(90)->get($externalApiUrl);
-                $externalData = $externalResponse->json();
-
-                // Extract external API price
-                $externalPrice = $externalData['itineraries'][0]['pricing_options'][0]['price']['amount'] ?? null;
-
-                if (!empty($results['Results']) && $externalPrice) {
-                    foreach ($results['Results'] as &$resultGroup) {
-                        foreach ($resultGroup as &$result) {
-                            $baseFare = $result['Fare']['BaseFare'];
-                            $originalPublishedFare = $result['Fare']['PublishedFare']; // Store original price
-                            $newBaseFare = $baseFare * 1.1; // Existing 10% markup
-
-                            // Dynamic price comparison
-                            $yourPrice = $originalPublishedFare;
-                            $priceDifference = $externalPrice - $yourPrice;
-
-                            // Apply additional markup if external price is slightly higher
-                            // if ($priceDifference > 0 && $priceDifference <= 20) {
-                                $newBaseFare += 25; // Add 25 to match or exceed external price
-                                Log::info('Dynamic markup applied', [
-                                    'originalPrice' => $yourPrice,
-                                    'externalPrice' => $externalPrice,
-                                    'priceDifference' => $priceDifference,
-                                    'additionalMarkup' => 25,
-                                    'newBaseFare' => $newBaseFare
-                                ]);
-                            // }
-
-                            $result['Fare']['BaseFare'] = round($newBaseFare, 2);
-                            $result['Fare']['PublishedFare'] = round($newBaseFare + $result['Fare']['Tax'], 2);
-
-                            // Log original and changed prices
-                            Log::info('Price comparison', [
-                                'flightId' => $result['ResultIndex'] ?? 'unknown',
-                                'originalPublishedFare' => $originalPublishedFare,
-                                'changedPublishedFare' => $result['Fare']['PublishedFare'],
-                                'externalPrice' => $externalPrice,
-                                'markupApplied' => ($priceDifference > 0 && $priceDifference <= 100) ? 25 : 0
-                            ]);
-                        }
-                    }
-                }
-            } catch (\Exception $e) {
-                Log::error('External API call failed', ['error' => $e->getMessage()]);
-                // Fallback to original markup logic if external API fails
-                if (!empty($results['Results'])) {
-                    foreach ($results['Results'] as &$resultGroup) {
-                        foreach ($resultGroup as &$result) {
-                            $baseFare = $result['Fare']['BaseFare'];
-                            $originalPublishedFare = $result['Fare']['PublishedFare']; // Store original price
-                            $newBaseFare = $baseFare * 1.1;
-
-                            $result['Fare']['BaseFare'] = round($newBaseFare, 2);
-                            $result['Fare']['PublishedFare'] = round($newBaseFare + $result['Fare']['Tax'], 2);
-
-                            // Log original and changed prices (no external comparison)
-                            Log::info('Price comparison (fallback)', [
-                                'flightId' => $result['ResultIndex'] ?? 'unknown',
-                                'originalPublishedFare' => $originalPublishedFare,
-                                'changedPublishedFare' => $result['Fare']['PublishedFare'],
-                                'externalPrice' => null,
-                                'markupApplied' => 0
-                            ]);
-                        }
-                    }
-                }
-            }
-        } else {
-            // Apply original markup logic if Markup is false
-            if (!empty($results['Results'])) {
-                foreach ($results['Results'] as &$resultGroup) {
-                    foreach ($resultGroup as &$result) {
-                        $baseFare = $result['Fare']['BaseFare'];
-                        $originalPublishedFare = $result['Fare']['PublishedFare']; // Store original price
-                        $newBaseFare = $baseFare * 1.1;
-
-                        $result['Fare']['BaseFare'] = round($newBaseFare, 2);
-                        $result['Fare']['PublishedFare'] = round($newBaseFare + $result['Fare']['Tax'], 2);
-
-                        // Log original and changed prices (no external comparison)
-                        Log::info('Price comparison (no markup)', [
-                            'flightId' => $result['ResultIndex'] ?? 'unknown',
-                            'originalPublishedFare' => $originalPublishedFare,
-                            'changedPublishedFare' => $result['Fare']['PublishedFare'],
-                            'externalPrice' => null,
-                            'markupApplied' => 0
-                        ]);
-                    }
+        $newBaseFare =0;
+        if (!empty($results['Results'])) {
+            $newBaseFare =3;
+            foreach ($results['Results'] as &$resultGroup) {
+                foreach ($resultGroup as &$result) {
+                    $baseFare = $result['Fare']['BaseFare'];
+                    $newBaseFare = $baseFare * 1.1;
+                    $result['Fare']['BaseFare'] = round($newBaseFare, 2);
+    
+                    // Optionally, recalculate PublishedFare or other fields
+                    $result['Fare']['PublishedFare'] = round($newBaseFare + $result['Fare']['Tax'], 2);
                 }
             }
         }
-
+    
         return $results;
     }
 
-    /**
-     * Determine the Markup value dynamically based on request or business logic
-     *
-     * @param Request $request
-     * @return bool
-     */
-    private function determineMarkup(Request $request): bool
-    {
-        // Example 1: Based on request input
-        if ($request->has('applyMarkup')) {
-            return filter_var($request->input('applyMarkup'), FILTER_VALIDATE_BOOLEAN);
-        }
-
-        // Example 2: Based on configuration
-        if (config('flights.enable_markup', false)) {
-            return true;
-        }
-
-        // Example 3: Based on specific route (e.g., DEL to BLR)
-        if ($request->input('Origin') === 'DEL' && $request->input('Destination') === 'BLR') {
-            return true;
-        }
-
-        // Example 4: Based on user role or authentication
-        if (auth()->check() && auth()->user()->hasRole('premium_user')) {
-            return true;
-        }
-
-        // Example 5: Based on date or time (e.g., enable markup on weekends)
-        if (in_array(now()->dayOfWeek, [Carbon\Carbon::SATURDAY, Carbon\Carbon::SUNDAY])) {
-            return true;
-        }
-
-        // Default: No markup
-        return false;
-    }
-  
 
     public function getUserBookings(string $id)
     {
@@ -373,7 +241,7 @@ class FlightController extends Controller
         }
         Log::info('Booking Payload ', $bookingPayload);
         // Make the API request
-        $response = Http::timeout(100)->post('https://booking.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/Book', $bookingPayload);
+        $response = Http::timeout(100)->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Book', $bookingPayload);
        
         // Handle API errors
         if ($response->failed()) {
@@ -384,7 +252,7 @@ class FlightController extends Controller
         if ($response->json('Response.Error.ErrorCode') === 6) {
             $token = $this->apiService->authenticate();
             $bookingPayload['TokenId'] = $token;
-            $response = Http::timeout(90)->post('https://booking.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/Book', $bookingPayload);
+            $response = Http::timeout(90)->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Book', $bookingPayload);
 
             if ($response->failed()) {
                 throw new \Exception('Retry API request failed after token refresh: ' . $response->body());
@@ -777,7 +645,7 @@ class FlightController extends Controller
             ], 422);
         }
 
-        $apiUrl = "https://booking.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/GetCancellationCharges";
+        $apiUrl = "http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/GetCancellationCharges";
 
         // Get validated request data
         $requestData = array_merge($validator->validated(), ['TokenId' => $token]);
@@ -886,14 +754,16 @@ class FlightController extends Controller
                 'Passengers' => 'required|array',
                 'email' => 'required|email',
                 'user_id' => 'required',
+                'checkPassport' => 'required|boolean', // <- Add this to your rules
                 'Passengers.*.Title' => 'required|string',
                 'Passengers.*.FirstName' => 'required|string',
                 'Passengers.*.LastName' => 'required|string',
                 'Passengers.*.PaxType' => 'required|integer',
                 'Passengers.*.DateOfBirth' => 'required|date',
                 'Passengers.*.Gender' => 'required|integer',
-                'Passengers.*.PassportNo' => 'nullable|string',
-                'Passengers.*.PassportExpiry' => 'nullable|date',
+                // Conditionally require passport fields
+                'Passengers.*.PassportNo' => $request->checkPassport ? 'required|string' : 'nullable|string',
+                'Passengers.*.PassportExpiry' => $request->checkPassport ? 'required|date' : 'nullable|date',
                 'Passengers.*.AddressLine1' => 'required|string',
                 'Passengers.*.City' => 'required|string',
                 'Passengers.*.CountryCode' => 'required|string',
@@ -918,6 +788,7 @@ class FlightController extends Controller
                 'EndUserIp' => 'required|string',
                 'TraceId' => 'required|string',
             ]);
+            
 
             // Prepare the booking payload
             $bookingPayload = [
@@ -930,14 +801,13 @@ class FlightController extends Controller
 
             // Loop through passengers
             foreach ($validatedData['Passengers'] as $passenger) {
-                $bookingPayload['Passengers'][] = [
+                $passengerData = [
                     "Title" => $passenger['Title'],
                     "FirstName" => $passenger['FirstName'],
                     "LastName" => $passenger['LastName'],
                     "PaxType" => $passenger['PaxType'],
                     "DateOfBirth" => $passenger['DateOfBirth'],
                     "Gender" => $passenger['Gender'],
-    
                     "AddressLine1" => $passenger['AddressLine1'],
                     "City" => $passenger['City'],
                     "CountryCode" => $passenger['CountryCode'],
@@ -961,25 +831,24 @@ class FlightController extends Controller
                         "ServiceFee" => $passenger['Fare']['ServiceFee'] ?? 0,
                     ],
                 ];
-
-                // if (!empty($passenger['PassportNo'])) {
-                //     $passengerData['PassportNo'] = $passenger['PassportNo'];
-                // }
-                // if (!empty($passenger['PassportExpiry'])) {
-                //     $passengerData['PassportExpiry'] = $passenger['PassportExpiry'];
-                // }
-
-            }
             
+                // Only include passport fields if checkPassport is true
+                if ($validatedData['checkPassport']) {
+                    $passengerData['PassportNo'] = $passenger['PassportNo'];
+                    $passengerData['PassportExpiry'] = $passenger['PassportExpiry'];
+                }
+            
+                $bookingPayload['Passengers'][] = $passengerData;
+            }
             
 
           
-
+   
             // Make the API request
-            $response = Http::timeout(100)->post('https://booking.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/Ticket', $bookingPayload);
+            $response = Http::timeout(100)->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Ticket', $bookingPayload);
 
-            Log::info('Booking Payload Input ', $bookingPayload);
-            Log::info('Booking Response Output', ['data' => $response]);
+            Log::info('Booking Payload ', $bookingPayload);
+            Log::info('Booking Payload Output', ['data' => $response->json()]);
             // Handle API errors
             if ($response->failed()) {
                 throw new \Exception('Initial API request failed: ' . $response->body());
@@ -989,7 +858,7 @@ class FlightController extends Controller
             if ($response->json('Response.Error.ErrorCode') === 6) {
                 $token = $this->apiService->authenticate();
                 $bookingPayload['TokenId'] = $token;
-                $response = Http::timeout(90)->post('https://booking.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/Ticket', $bookingPayload);
+                $response = Http::timeout(90)->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Ticket', $bookingPayload);
                 Log::info('Booking Payload ', $bookingPayload);
                 if ($response->failed()) {
                     throw new \Exception('Retry API request failed after token refresh: ' . $response->body());
@@ -1187,7 +1056,7 @@ class FlightController extends Controller
 
             // Make the API request
             $response = Http::timeout(100)->post(
-                'https://booking.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/GetBookingDetails',
+                'http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/GetBookingDetails',
                 $payload
             );
 
@@ -1201,7 +1070,7 @@ class FlightController extends Controller
                 $token = $this->apiService->authenticate(); // Refresh token
                 $payload['TokenId'] = $token;
                 $response = Http::timeout(90)->post(
-                    'https://booking.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/GetBookingDetails',
+                    'http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/GetBookingDetails',
                     $payload
                 );
 
@@ -1336,7 +1205,7 @@ class FlightController extends Controller
             'BookingId' => $validatedData['BookingId'],
         ];
     
-        $response = Http::timeout(90)->post('https://booking.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/Ticket', $payload);
+        $response = Http::timeout(90)->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/Ticket', $payload);
     
         return $response->json();
     }
@@ -1568,7 +1437,7 @@ class FlightController extends Controller
             $token = $this->apiService->authenticate();
 
 
-            $response = Http::timeout(90)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/rest/PriceRBD', $searchPayload);
+            $response = Http::timeout(90)->withHeaders([])->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/PriceRBD', $searchPayload);
         }
 
         //  Return the search response
@@ -1588,17 +1457,15 @@ class FlightController extends Controller
         ]);
         $validatedData["TokenId"] = $token;
 
-        Log::info('Fare Rule Payload Input', ['data' => $validatedData]);
-
-        $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/FareRule', $validatedData);
-
-        Log::info('Fare Rule Payload Output', ['data' => $response]);
+        Log::info('FareRule Payload Input', ['data' => $validatedData]);
+        $response = Http::timeout(100)->withHeaders([])->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/FareRule', $validatedData);
+        Log::info('FareRule Payload Output', ['data' => $response->json()]);
         if ($response->json('Response.Error.ErrorCode') === 6) {
 
             $token = $this->apiService->authenticate();
 
 
-            $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/FareRule', $validatedData);
+            $response = Http::timeout(100)->withHeaders([])->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/FareRule', $validatedData);
         }
         return $response;
     }
@@ -1628,7 +1495,7 @@ class FlightController extends Controller
         ];
 
 
-        $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/SSR', $searchpayload);
+        $response = Http::timeout(100)->withHeaders([])->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/rest/SSR', $searchpayload);
         if ($response->json('Response.Error.ErrorCode') === 6) {
 
             $token = $this->apiService->authenticate();
@@ -1675,7 +1542,7 @@ class FlightController extends Controller
 
             // Make the API request to TekTravels for cancellation
             $response = Http::timeout(100)->post(
-                'https://booking.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/GetBookingDetails',
+                'http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/GetBookingDetails',
                 $payload
             );
 
@@ -1708,7 +1575,7 @@ class FlightController extends Controller
 
                 // Retry the request
                 $response = Http::timeout(90)->post(
-                    'https://booking.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/GetBookingDetails',
+                    'http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/GetBookingDetails',
                     $payload
                 );
 
@@ -1857,18 +1724,17 @@ class FlightController extends Controller
         ]);
         $validatedData["TokenId"] = $token;
 
-        Log::info('Fare Quote Payload Input', ['data' => $validatedData]);
+        Log::info('FareQuote Payload Input', ['data' => $validatedData]);
 
-        $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/FareQuote', $validatedData);
-
-        Log::info('Fare Quote Payload Output', ['data' => $response]);
+        $response = Http::timeout(100)->withHeaders([])->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/FareQuote', $validatedData);
+        Log::info('FareQuote Payload Output', ['data' => $response->json()]);
 
         if ($response->json('Response.Error.ErrorCode') === 6) {
 
             $token = $this->apiService->authenticate();
 
 
-            $response = Http::timeout(100)->withHeaders([])->post('https://tboapi.travelboutiqueonline.com/AirAPI_V10/AirService.svc/rest/FareQuote', $validatedData);
+            $response = Http::timeout(100)->withHeaders([])->post('http://api.tektravels.com/BookingEngineService_Air/AirService.svc/rest/FareQuote', $validatedData);
         }
         return $response;
     }
