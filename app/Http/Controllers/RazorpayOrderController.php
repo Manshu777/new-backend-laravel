@@ -27,7 +27,7 @@ class RazorpayOrderController extends Controller
     }
 
     try {
-        $api = new Api('rzp_test_heUFNPhcTPl901', 'MOFh3dbTt5z1553YYoN8obhl');
+        $api = new Api('rzp_live_GHQAKE32vCoZBA', 'BhyavmdSkqpCEY0kPsaoX543');
 
         $payment = $api->payment->fetch($request->payment_id);
 
@@ -71,7 +71,7 @@ class RazorpayOrderController extends Controller
 
         try {
             // Initialize Razorpay API
-              $api = new Api('rzp_test_heUFNPhcTPl901', 'MOFh3dbTt5z1553YYoN8obhl');
+              $api = new Api('rzp_live_GHQAKE32vCoZBA', 'BhyavmdSkqpCEY0kPsaoX543');
 
             // Create Razorpay order
             $orderData = [
