@@ -91,26 +91,15 @@ class MatrixController extends Controller
             'limit' => 'sometimes|integer|min:1',
             'page_no' => 'sometimes|integer|min:1',
         ]);
-
+    
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
-
-        $params = [];
-        if ($request->has('country_covered')) {
-            $params[] = 'country_covered=' . urlencode($request->query('country_covered'));
-        }
-        if ($request->has('limit')) {
-            $params[] = 'limit=' . $request->query('limit');
-        }
-        if ($request->has('page_no')) {
-            $params[] = 'page_no=' . $request->query('page_no');
-        }
-
-        $endpoint = 'plans' . (empty($params) ? '' : '?' . implode('&', $params));
+    
+        $query = http_build_query($request->only(['country_covered', 'limit', 'page_no']));
+        $endpoint = 'plans' . ($query ? '?' . $query : '');
         $response = $this->makeRequest('get', $endpoint);
-
-        // Normalize response for frontend
+    
         if ($response['status'] === 1) {
             $response['data'] = array_map(function ($plan) {
                 return [
@@ -127,7 +116,7 @@ class MatrixController extends Controller
                 ];
             }, $response['data']);
         }
-
+    
         return response()->json($response, $response['http_status'] ?? 200);
     }
 
@@ -168,26 +157,48 @@ class MatrixController extends Controller
      * Create Order
      */
     public function createOrder(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'validatedOrderId' => 'required|string',
-        ]);
+     {
+    $validator = Validator::make($request->all(), [
+        'validatedOrderId' => 'required|string',
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $response = $this->makeRequest('post', 'create-order', $request->all());
-
-        // Normalize response for frontend
-        if ($response['status'] === 1 && isset($response['orderDetail']) && is_array($response['orderDetail']) && !empty($response['orderDetail'])) {
-            $response['orderNo'] = $response['orderId'] ?? '';
-            $response['simNo'] = $response['orderDetail'][0]['simNumber'] ?? '';
-        }
-
-        return response()->json($response, $response['http_status'] ?? 200);
+    if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 422);
     }
 
+    // Check wallet balance
+    $walletResponse = $this->makeRequest('get', 'wallet-balance');
+    if ($walletResponse['status'] !== 1 || !isset($walletResponse['data']['balance'])) {
+        return response()->json([
+            'status' => 0,
+            'message' => 'Unable to verify wallet balance',
+            'data' => [],
+            'http_status' => 400,
+        ], 400);
+    }
+
+    // Assuming the API returns balance in 'data.balance' (adjust based on actual response)
+    $balance = $walletResponse['data']['balance'];
+    // Fetch order cost from validate-order response or pass it in the request
+    $orderCost = $request->input('orderCost'); // Add orderCost to request or fetch from validate-order
+    if ($orderCost && $balance < $orderCost) {
+        return response()->json([
+            'status' => 0,
+            'message' => 'Insufficient wallet balance',
+            'data' => [],
+            'http_status' => 400,
+        ], 400);
+    }
+
+    $response = $this->makeRequest('post', 'create-order', $request->all());
+
+    if ($response['status'] === 1 && isset($response['orderDetail']) && is_array($response['orderDetail']) && !empty($response['orderDetail'])) {
+        $response['orderNo'] = $response['orderId'] ?? '';
+        $response['simNo'] = $response['orderDetail'][0]['simNumber'] ?? '';
+    }
+
+    return response()->json($response, $response['http_status'] ?? 200);
+}
     /**
      * Get Orders
      */
