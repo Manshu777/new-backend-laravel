@@ -46,7 +46,7 @@ public  function getActivePackage(){
 
 public function topfivepackage(){
 
-  $package=  Toppackage::inRandomOrder()->take(5)->get();
+  $package=  TravelPackage::inRandomOrder()->take(5)->get();
 
 return $package;
 
