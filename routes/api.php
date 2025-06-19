@@ -147,7 +147,7 @@ Route::post('v1/hotels/hotel_single', [HotelControllerSearchRes::class, 'singleH
 Route::post('v1/hotels/prebooking', [HotelControllerSearchRes::class, 'preBooking']);
 
 Route::post('v1/hotel/book', [HotelControllerSearchRes::class, 'bookHotel']);
-Route::post('v1/hotel/bookdetails', [HotelControllerSearchRes::class, 'getBookingDetail']);
+Route::post('v1/hotel/bookdetails', [HotelControllerSearchRes::class, 'getBookingDetailHotel']);
 // routes/api.php
 Route::post('v1/hotel/cancel', [HotelControllerSearchRes::class, 'cancelHotelBooking']);
 

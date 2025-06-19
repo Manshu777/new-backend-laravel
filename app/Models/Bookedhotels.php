@@ -22,13 +22,13 @@ class Bookedhotels extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        "user_id",
+        'user_id',
         'hotel_id',
-        'user_name', 
+        'user_name',
         'user_number',
         'hotel_name',
         'location',
-        'address',  
+        'address',
         'check_in_date',
         'check_out_date',
         'room_type',
@@ -41,18 +41,36 @@ class Bookedhotels extends Model
         'traceid',
         'bookingId',
         'pnr',
+        'enduserip',
+        'hotel_booking_status',
+        'confirmation_no',
+        'net_amount',
+        'last_cancellation_date',
+        'star_rating',
+        'address_line1',
+        'city',
+        'country_code',
+        'no_of_rooms',
+        'booking_date',
     ];
 
-    
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
     protected $casts = [
         'check_in_date' => 'date',
         'check_out_date' => 'date',
+        'last_cancellation_date' => 'date',
+        'booking_date' => 'datetime',
         'price' => 'decimal:2',
+        'net_amount' => 'decimal:2',
         'refund' => 'boolean',
-       
+        'star_rating' => 'integer',
+        'no_of_rooms' => 'integer',
     ];
 
-    
     // public function user()
     // {
     //     return $this->belongsTo(User::class, 'user_id', 'id')->withDefault([
