@@ -19,6 +19,7 @@ use GuzzleHttp\Psr7\Request as GuzzleRequest;
 use GuzzleHttp\Exception\RequestException;
 use App\Models\Bookedhotels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 class HotelControllerSearchRes extends Controller
 {
 
@@ -30,10 +31,10 @@ class HotelControllerSearchRes extends Controller
     public function getCountries(Request $request)
  {
             // API endpoint
-            $apiUrl = 'http://api.tbotechnology.in/TBOHolidays_HotelAPI/CountryList';
+            $apiUrl = 'https://apiwr.tboholidays.com/HotelAPI/CountryList';
 
-            $username = 'TBOStaticAPITest';
-            $password = 'Tbo@11530818'; 
+            $username = 'travelcategory';
+            $password = 'Tra@59334536'; 
 
             try {
                 // Make the API request using Laravel's HTTP client
@@ -110,8 +111,8 @@ class HotelControllerSearchRes extends Controller
             // No valid data in TBOHotelCode, fetch from API
             $client = new Client();
             $startTime = microtime(true);
-            $response1 = $client->post('http://api.tbotechnology.in/TBOHolidays_HotelAPI/TBOHotelCodeList', [
-                'auth' => ['TBOStaticAPITest', 'Tbo@11530818'],
+            $response1 = $client->post('https://apiwr.tboholidays.com/HotelAPI/TBOHotelCodeList', [
+                'auth' => ['travelcategory', 'Tra@59334536'],
                 'json' => [
                     "CityCode" => $validated['cityCode'],
                     "IsDetailedResponse" => true,
@@ -200,8 +201,8 @@ class HotelControllerSearchRes extends Controller
                     'payload' => $payload,
                 ]);
 
-                yield new GuzzleRequest('POST', 'https://affiliate.tektravels.com/HotelAPI/Search', [
-                    'Authorization' => 'Basic ' . base64_encode('Apkatrip:Apkatrip@1234'),
+                yield new GuzzleRequest('POST', 'https://affiliate.travelboutiqueonline.com/HotelAPI/Search', [
+                    'Authorization' => 'Basic ' . base64_encode('IXCN483:#New@api48#'),
                     'Content-Type' => 'application/json',
                 ], json_encode($payload));
             }
@@ -250,8 +251,8 @@ class HotelControllerSearchRes extends Controller
                     // Fetch hotel details
                     try {
                         $detailStartTime = microtime(true);
-                        $response2 = $client->post('http://api.tbotechnology.in/TBOHolidays_HotelAPI/Hoteldetails', [
-                            'auth' => ['TBOStaticAPITest', 'Tbo@11530818'],
+                        $response2 = $client->post('https://apiwr.tboholidays.com/HotelAPI/Hoteldetails', [
+                            'auth' => ['travelcategory', 'Tra@59334536'],
                             'json' => [
                                 "Hotelcodes" => $hotelCode,
                                 "Language" => "EN",
@@ -339,12 +340,12 @@ class HotelControllerSearchRes extends Controller
     ]);
 
     try {
-        $response1 = Http::withBasicAuth('TBOStaticAPITest', 'Tbo@11530818')->post('http://api.tbotechnology.in/TBOHolidays_HotelAPI/Hoteldetails', [
+        $response1 = Http::withBasicAuth('travelcategory', 'Tra@59334536')->post('https://apiwr.tboholidays.com/HotelAPI/Hoteldetails', [
             "Hotelcodes" => $validated['HotelCode'],
             "Language" => "EN"
         ]);
 
-        $response2 = Http::withBasicAuth('Apkatrip', 'Apkatrip@1234')->post('https://affiliate.tektravels.com/HotelAPI/Search', [
+        $response2 = Http::withBasicAuth('IXCN483', '#New@api48#')->post('https://affiliate.travelboutiqueonline.com/HotelAPI/Search', [
             "CheckIn" => $validated['checkIn'],
             "CheckOut" => $validated['checkOut'],
             "HotelCodes" => $validated['HotelCode'],
@@ -405,7 +406,7 @@ class HotelControllerSearchRes extends Controller
         ]);
 
 
-        $response1 = Http::withBasicAuth('Apkatrip', 'Apkatrip@1234')->post('https://affiliate.tektravels.com/HotelAPI/PreBook', [
+        $response1 = Http::withBasicAuth('IXCN483', '#New@api48#')->post('ttps://affiliate.travelboutiqueonline.com/HotelAPI/PreBook', [
             "BookingCode" => $validated['BookingCode']
 
         ]);
@@ -413,6 +414,7 @@ class HotelControllerSearchRes extends Controller
 
         return $response1;
     }
+
 
     public function bookHotel(Request $request)
     {
@@ -424,7 +426,7 @@ class HotelControllerSearchRes extends Controller
                 'IsVoucherBooking' => 'required|boolean',
                 'GuestNationality' => 'required|string|size:2',
                 'EndUserIp' => 'required|ip',
-                'RequestedBookingType' => 'required|integer|min:1',
+                'RequestedBookingMode' => 'required|integer|min:1',
                 'NetAmount' => 'required|numeric|min:0',
                 'HotelRoomsDetails' => 'required|array|min:1',
                 'HotelRoomsDetails.*.HotelPassenger' => 'required|array|min:1',
@@ -450,7 +452,7 @@ class HotelControllerSearchRes extends Controller
                 'HotelRoomsDetails.*.HotelPassenger.*.GSTCompanyEmail' => 'nullable|email|max:255',
                 'ArrivalTransport' => 'nullable',
                 'TraceId' => 'nullable|string|max:255',
-                'TokenId' => 'nullable|string|max:255',
+                'TokenId' => 'nullable|string|max:255', // Added TokenId validation
             ]);
 
             // Prepare the payload
@@ -459,7 +461,7 @@ class HotelControllerSearchRes extends Controller
                 'IsVoucherBooking' => $validated['IsVoucherBooking'],
                 'GuestNationality' => $validated['GuestNationality'],
                 'EndUserIp' => $validated['EndUserIp'],
-                'RequestedBookingType' => $validated['RequestedBookingType'],
+                'RequestedBookingMode' => $validated['RequestedBookingMode'],
                 'NetAmount' => $validated['NetAmount'],
                 'HotelRoomsDetails' => $validated['HotelRoomsDetails'],
                 'IsPackageFare' => $validated['IsPackageFare'] ?? false,
@@ -468,16 +470,16 @@ class HotelControllerSearchRes extends Controller
                 'TraceId' => $validated['TraceId'] ?? null,
             ];
 
-            // Make the HTTP request for booking
+            // Make the HTTP request
             Log::info('Hotel Booking Payload:', $payload);
 
-            $response = Http::withBasicAuth('Apkatrip', 'Apkatrip@1234')
-                ->timeout(30)
-                ->post('https://HotelBE.tektravels.com/hotelservice.svc/rest/book', $payload);
+            $response = Http::withBasicAuth('IXCN483', '#New@api48#')
+                ->timeout(60)
+                ->post('https://hotelbooking.travelboutiqueonline.com/HotelAPI_V10/HotelService.svc/rest/book', $payload);
 
             // Check if the response is successful
             if ($response->failed()) {
-                throw new Exception('API request failed with status code: ' . $response->status());
+                throw new \Exception('API request failed with status code: ' . $response->status());
             }
 
             // Decode the response
@@ -485,13 +487,13 @@ class HotelControllerSearchRes extends Controller
 
             // Check if JSON decoding was successful
             if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new Exception('Failed to parse API response: ' . json_last_error_msg());
+                throw new \Exception('Failed to parse API response: ' . json_last_error_msg());
             }
 
             // Check if the API returned an error in the response data
             if (isset($responseData['Error']) || isset($responseData['error'])) {
                 $errorMessage = $responseData['Error'] ?? $responseData['error'] ?? 'Unknown API error';
-                throw new Exception('API error: ' . $errorMessage);
+                throw new \Exception('API error: ' . $errorMessage);
             }
 
             // Extract booking details
@@ -505,86 +507,34 @@ class HotelControllerSearchRes extends Controller
                     }
                 }
             }
+            $bookingDetails = array_merge($payload, $bookResult);
 
-            // Save initial booking data to Bookedhotels table
+            // Save booking data to Bookedhotels table
             $bookedHotel = Bookedhotels::create([
-                'user_id' => '1', // Assuming authenticated user
+                'user_id' => '1',// Assuming authenticated user
                 'enduserip' => $validated['EndUserIp'],
-                'hotel_id' => $bookResult['HotelId'] ?? null,
+                'hotel_id' => $bookResult['HotelId'] ?? null, // Adjust based on actual response structure
                 'user_name' => $leadPassenger ? ($leadPassenger['Title'] . ' ' . $leadPassenger['FirstName'] . ' ' . $leadPassenger['LastName']) : null,
                 'user_number' => $leadPassenger['Phoneno'] ?? null,
-                'hotel_name' => $bookResult['HotelName'] ?? null,
-                'location' => $bookResult['Location'] ?? null,
-                'address' => $bookResult['Address'] ?? null,
-                'check_in_date' => $bookResult['CheckInDate'] ?? '2025-09-22',
-                'check_out_date' => $bookResult['CheckOutDate'] ?? '2025-09-22',
-                'room_type' => $bookResult['RoomType'] ?? 'rfr',
+                'hotel_name' => $bookResult['HotelName'] ?? null, // Adjust based on actual response structure
+                'location' => $bookResult['Location'] ?? null, // Adjust based on actual response structure
+                'address' => $bookResult['Address'] ?? null, // Adjust based on actual response structure
+                'check_in_date' => $bookResult['CheckInDate'] ?? '2025-09-22', // Adjust based on actual response structure
+                'check_out_date' => $bookResult['CheckOutDate'] ?? '2025-09-22', // Adjust based on actual response structure
+                'room_type' => $bookResult['RoomType'] ?? 'rfr', // Adjust based on actual response structure
                 'price' => $validated['NetAmount'],
                 'date_of_booking' => now(),
                 'initial_response' => json_encode($responseData),
                 'refund' => false,
                 'response' => json_encode($bookResult),
-                'tokenid' => $token,
+                'tokenid' =>  $token,
                 'traceid' => $bookResult['TraceId'] ?? null,
-                'booking_id' => $bookResult['BookingId'] ?? null,
-                'pnr' => $bookResult['ConfirmationNo'] ?? null,
+                'bookingId' => $bookResult['BookingId'] ?? null, // Adjust based on actual response structure
+                'pnr' => $bookResult['ConfirmationNo'] ?? null, // Adjust based on actual response structure
             ]);
 
-            // Fetch booking details from GetBookingDetail API
-            $bookingId = $bookResult['BookingId'] ?? null;
-            if ($bookingId) {
-                $bookingDetailPayload = [
-                    'BookingId' => $bookingId,
-                    'EndUserIp' => $validated['EndUserIp'],
-                ];
-
-                Log::info('GetBookingDetail Payload:', $bookingDetailPayload);
-
-                $bookingDetailResponse = Http::withBasicAuth('Apkatrip', 'Apkatrip@1234')
-                    ->timeout(30)
-                    ->post('https://HotelBE.tektravels.com/hotelservice.svc/rest/GetBookingDetail', $bookingDetailPayload);
-
-                if ($bookingDetailResponse->successful()) {
-                    $bookingDetailData = json_decode($bookingDetailResponse->body(), true);
-
-                    if (json_last_error() === JSON_ERROR_NONE && isset($bookingDetailData['status']) && $bookingDetailData['status'] === 'success') {
-                        $bookingData = $bookingDetailData['data'] ?? [];
-
-                        // Extract specific fields to save
-                        $bookingDetailsToSave = [
-                            'booking_id' => $bookingData['BookingId'] ?? $bookingId,
-                            'enduserip' => $validated['EndUserIp'],
-                            'hotel_name' => $bookingData['HotelName'] ?? null,
-                            'hotel_booking_status' => $bookingData['HotelBookingStatus'] ?? null,
-                            'confirmation_no' => $bookingData['HotelConfirmationNo'] ?? null,
-                            'check_in_date' => $bookingData['CheckInDate'] ?? null,
-                            'check_out_date' => $bookingData['CheckOutDate'] ?? null,
-                            'net_amount' => $bookingData['NetAmount'] ?? null,
-                            'last_cancellation_date' => $bookingData['LastCancellationDate'] ?? null,
-                            'star_rating' => $bookingData['StarRating'] ?? null,
-                            'address_line1' => $bookingData['AddressLine1'] ?? null,
-                            'city' => $bookingData['City'] ?? null,
-                            'country_code' => $bookingData['CountryCode'] ?? null,
-                            'no_of_rooms' => $bookingData['NoOfRooms'] ?? null,
-                            'booking_date' => $bookingData['BookingDate'] ?? null,
-                        ];
-
-                        // Update the existing booked hotel record with specific details
-                        $bookedHotel->update($bookingDetailsToSave);
-
-                        Log::info('Specific booking details saved successfully for BookingId: ' . $bookingId);
-                    } else {
-                        Log::warning('Failed to parse GetBookingDetail response or response status not success for BookingId: ' . $bookingId);
-                    }
-                } else {
-                    Log::error('GetBookingDetail API request failed with status code: ' . $bookingDetailResponse->status());
-                }
-            } else {
-                Log::warning('No BookingId found to fetch booking details');
-            }
-
             // Prepare booking details for email and PDF
-            $bookingDetails = array_merge($payload, $bookResult);
+          
 
             // Generate PDF
             $pdf = PDF::loadView('pdf.booking_confirmationhotel', ['bookingDetails' => $bookingDetails]);
@@ -616,13 +566,17 @@ class HotelControllerSearchRes extends Controller
                 'status' => 'error',
                 'message' => 'Failed to connect to the hotel booking service: ' . $e->getMessage()
             ], 503);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'An error occurred while processing the booking: ' . $e->getMessage()
             ], 500);
         }
     }
+ 
+
+
+
 
 
     public function getBookingDetails(Request $request)
@@ -661,7 +615,7 @@ class HotelControllerSearchRes extends Controller
     
             // Make the API request to the hotel API
             $response = Http::timeout(100)->post(
-                'https://HotelBE.tektravels.com/hotelservice.svc/rest/GetBookingDetail',
+                'https://hotelbooking.travelboutiqueonline.com/HotelAPI_V10/HotelService.svc/rest/GetBookingDetail',
                 $payload
             );
     
@@ -675,7 +629,7 @@ class HotelControllerSearchRes extends Controller
                 $token = $this->apiService->authenticate(); // Refresh token
                 $payload['TokenId'] = $token;
                 $response = Http::timeout(90)->post(
-                    'https://HotelBE.tektravels.com/hotelservice.svc/rest/GetBookingDetail',
+                    'https://hotelbooking.travelboutiqueonline.com/HotelAPI_V10/HotelService.svc/rest/GetBookingDetail',
                     $payload
                 );
     
@@ -769,8 +723,8 @@ class HotelControllerSearchRes extends Controller
             Log::info('GetBookingDetail Payload Input', ['data' => $payload]);
     
             // Prepare Basic Auth credentials
-            $username = 'Apkatrip';
-            $password = 'Apkatrip@1234';
+            $username = 'IXCN483';
+            $password = '#New@api48#';
             $credentials = base64_encode("{$username}:{$password}");
     
             // Make the API request with Basic Auth
@@ -778,7 +732,7 @@ class HotelControllerSearchRes extends Controller
                 'Authorization' => "Basic {$credentials}",
                 'Content-Type' => 'application/json',
             ])->timeout(100)->post(
-                'https://HotelBE.tektravels.com/hotelservice.svc/rest/GetBookingDetail',
+                'https://hotelbooking.travelboutiqueonline.com/HotelAPI_V10/HotelService.svc/rest/GetBookingDetail',
                 $payload
             );
     
@@ -861,122 +815,180 @@ class HotelControllerSearchRes extends Controller
     
         
     
-    
     public function cancelHotelBooking(Request $request)
     {
-            // Validate input parameters
-            $validated = $request->validate([
-                'BookingMode' => 'required|integer',
-                'ChangeRequestId' => 'required|integer',
-                'EndUserIp' => 'required|ip',
-                'BookingId' => 'required|integer',
-                'RequestType' => 'required|in:4',
-                'Remarks' => 'required|string',
-            ]);
-        
-            try {
-                // Retrieve the booking from the database using BookingId
-                $booking = Bookedhotels::where('bookingId', $validated['BookingId'])->first();
-        
-                if (!$booking || !$booking->tokenid) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'No booking or TokenId found for the provided BookingId.',
-                        'error' => [
-                            'ErrorCode' => 404,
-                            'ErrorMessage' => 'Booking or TokenId not found'
-                        ]
-                    ], 404);
-                }
-        
-                // Prepare payload for API using TokenId from database
-                $payload = [
-                    'BookingMode' => $validated['BookingMode'],
-                    'ChangeRequestId' => $validated['ChangeRequestId'],
-                    'EndUserIp' => $validated['EndUserIp'],
-                    'TokenId' => $booking->tokenid,
-                    'BookingId' => $validated['BookingId'],
-                    'RequestType' => $validated['RequestType'],
-                    'Remarks' => $validated['Remarks'],
-                ];
-        
-                // Call the CancelBooking API using environment variables for credentials
-                $response = Http::withBasicAuth(
-                    config('services.hotel_api.username', 'Apkatrip'),
-                    config('services.hotel_api.password', 'Apkatrip@1234')
-                )->post(
-                    config('services.hotel_api.cancel_endpoint', 'http://HotelBE.tektravels.com/internalhotelservice.svc/rest/SendChangeRequest'),
-                    $payload
-                );
-        
-                // Check if response is valid JSON
-                $responseData = json_decode($response->body(), true);
-                if (json_last_error() !== JSON_ERROR_NONE) {
-                    Log::error('Invalid JSON response from hotel cancellation API', [
-                        'body' => $response->body(),
-                        'status' => $response->status(),
-                    ]);
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Invalid response from cancellation API.',
-                        'error' => [
-                            'ErrorCode' => -1,
-                            'ErrorMessage' => 'Invalid JSON response'
-                        ]
-                    ], 500);
-                }
-        
-                // Log the API request and response for debugging
-                Log::info('Hotel cancellation API call', [
-                    'request' => $payload,
-                    'response' => $responseData,
-                    'status' => $response->status(),
-                ]);
-        
-                // Check if API call was successful
-                if ($response->failed() || isset($responseData['Error']['ErrorCode']) && $responseData['Error']['ErrorCode'] != 0) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Failed to process cancellation request.',
-                        'error' => $responseData['Error'] ?? [
-                            'ErrorCode' => -1,
-                            'ErrorMessage' => 'API request failed'
-                        ]
-                    ], 500);
-                }
-        
-                // Update Bookedhotels table on successful cancellation
-                $booking->update([
-                    'response' => json_encode($responseData), // Store API response
-                    'refund' => isset($responseData['RefundAmount']) && $responseData['RefundAmount'] > 0 ? 1 : 0, // Set refund based on API response
-                    'updated_at' => now(), // Ensure timestamp is updated
-                ]);
-        
-                // Return success response
-                return response()->json([
-                    'status' => 'success',
-                    'data' => $responseData,
-                ], 200);
-        
-            } catch (\Exception $e) {
-                // Log unexpected errors
-                Log::error('Unexpected error in cancelHotelBooking', [
-                    'message' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
-                ]);
-        
+        // Validate input parameters
+        $validated = $request->validate([
+            'BookingMode' => 'required|integer',
+            'ChangeRequestId' => 'required|integer',
+            'EndUserIp' => 'required|ip',
+            'BookingId' => 'required|integer',
+            'RequestType' => 'required|in:4', // Assuming 4 is for cancellation
+            'Remarks' => 'required|string',
+        ]);
+    
+        try {
+            // Retrieve the booking from the database using BookingId
+            $booking = Bookedhotels::where('bookingId', $validated['BookingId'])->first();
+    
+            if (!$booking || !$booking->tokenid) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'An unexpected error occurred.',
+                    'message' => 'No booking or TokenId found for the provided BookingId.',
+                    'error' => [
+                        'ErrorCode' => 404,
+                        'ErrorMessage' => 'Booking or TokenId not found'
+                    ]
+                ], 404);
+            }
+    
+            // Check if booking is already cancelled or failed
+            $responseData = json_decode($booking->response, true);
+            if ($booking->cancellation_status === 'Cancelled' || (isset($responseData['HotelBookingStatus']) && $responseData['HotelBookingStatus'] === 'Cancelled')) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Booking is already cancelled.',
+                    'error' => [
+                        'ErrorCode' => 400,
+                        'ErrorMessage' => 'Booking already cancelled'
+                    ]
+                ], 400);
+            }
+    
+            if (isset($responseData['ResponseStatus']) && $responseData['ResponseStatus'] == 3) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Booking cannot be cancelled due to existing cancellation restrictions.',
+                    'error' => [
+                        'ErrorCode' => 400,
+                        'ErrorMessage' => $responseData['Error']['ErrorMessage'] ?? 'Cancellation restricted'
+                    ]
+                ], 400);
+            }
+    
+            // Prepare payload for API
+            $payload = [
+                'BookingMode' => $validated['BookingMode'],
+                'ChangeRequestId' => $validated['ChangeRequestId'],
+                'EndUserIp' => $validated['EndUserIp'],
+                'TokenId' => $booking->tokenid,
+                'BookingId' => $validated['BookingId'],
+                'RequestType' => $validated['RequestType'],
+                'Remarks' => $validated['Remarks'],
+                'ConfirmationNo' => $booking->confirmation_no,
+                'PNR' => $booking->pnr,
+            ];
+    
+            // Update booking with cancellation request details
+            $booking->update([
+                'cancellation_status' => 'Requested',
+                'cancellation_remarks' => $validated['Remarks'],
+                'cancellation_request_id' => $validated['ChangeRequestId'],
+                'cancellation_initiated_at' => now(),
+                'updated_at' => now(),
+            ]);
+    
+            // Call the CancelBooking API
+            $response = Http::withBasicAuth(
+                config('services.hotel_api.username', 'IXCN483'),
+                config('services.hotel_api.password', '#New@api48#')
+            )->post(
+                config('services.hotel_api.cancel_endpoint', 'https://hotelbooking.travelboutiqueonline.com/HotelAPI_V10/HotelService.svc/rest/SendChangeRequest'),
+                $payload
+            );
+    
+            // Check if response is valid JSON
+            $responseData = json_decode($response->body(), true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                Log::error('Invalid JSON response from hotel cancellation API', [
+                    'body' => $response->body(),
+                    'status' => $response->status(),
+                ]);
+                $booking->update(['cancellation_status' => 'Failed']);
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Invalid response from cancellation API.',
                     'error' => [
                         'ErrorCode' => -1,
-                        'ErrorMessage' => 'Internal server error'
+                        'ErrorMessage' => 'Invalid JSON response'
                     ]
                 ], 500);
             }
-    }
     
- 
+            // Log the API request and response
+            Log::info('Hotel cancellation API call', [
+                'request' => $payload,
+                'response' => $responseData,
+                'status' => $response->status(),
+            ]);
+    
+            // Check if API call was successful
+            if ($response->failed() || (isset($responseData['Error']['ErrorCode']) && $responseData['Error']['ErrorCode'] != 0)) {
+                $booking->update(['cancellation_status' => 'Failed']);
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Failed to process cancellation request.',
+                    'error' => $responseData['Error'] ?? [
+                        'ErrorCode' => -1,
+                        'ErrorMessage' => 'API request failed'
+                    ]
+                ], 500);
+            }
+    
+            // Determine cancellation status from API response
+            $cancellationStatus = isset($responseData['HotelChangeRequestResult']['ChangeRequestStatus']) && $responseData['HotelChangeRequestResult']['ChangeRequestStatus'] == 1
+                ? 'Cancelled'
+                : 'Pending';
+    
+            // Update Bookedhotels table
+            $booking->update([
+                'response' => json_encode($responseData),
+                'hotel_booking_status' => $cancellationStatus === 'Cancelled' ? 'Cancelled' : $booking->hotel_booking_status,
+                'cancellation_status' => $cancellationStatus,
+                'refund' => isset($responseData['RefundAmount']) && $responseData['RefundAmount'] > 0 ? 1 : 0,
+                'refund_amount' => $responseData['RefundAmount'] ?? null,
+                'net_amount' => $responseData['RefundAmount'] ?? $booking->net_amount,
+                'last_cancellation_date' => $cancellationStatus === 'Cancelled' ? now()->toDateString() : $booking->last_cancellation_date,
+                'updated_at' => now(),
+            ]);
+    
+            // Return success response
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Cancellation request processed successfully.',
+                'data' => [
+                    'bookingId' => $booking->bookingId,
+                    'hotel_booking_status' => $booking->hotel_booking_status,
+                    'cancellation_status' => $booking->cancellation_status,
+                    'refund' => $booking->refund,
+                    'refund_amount' => $booking->refund_amount,
+                    'confirmation_no' => $booking->confirmation_no,
+                    'api_response' => $responseData,
+                ],
+            ], 200);
+    
+        } catch (\Exception $e) {
+            // Log unexpected errors
+            Log::error('Unexpected error in cancelHotelBooking', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+    
+            // Update cancellation status to Failed on error
+            if ($booking) {
+                $booking->update(['cancellation_status' => 'Failed']);
+            }
+    
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An unexpected error occurred during cancellation.',
+                'error' => [
+                    'ErrorCode' => -1,
+                    'ErrorMessage' => 'Internal server error'
+                ]
+            ], 500);
+        }
+    }
 
 
 
