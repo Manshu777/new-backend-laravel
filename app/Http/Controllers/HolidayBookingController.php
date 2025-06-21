@@ -48,7 +48,7 @@ class HolidayBookingController extends Controller
             Mail::to($booking->email)->send(new UserBookingConfirmation($booking));
 
             // Send email to owner
-            $ownerEmail = 'manshu.developer@gmail.com';
+            $ownerEmail = 'hsrana.hr@gmail.com';
             if (!empty($ownerEmail)) {
                 Log::info('Sending owner notification to: ' . $ownerEmail);
                 Mail::to($ownerEmail)->send(new OwnerBookingNotification($booking));
