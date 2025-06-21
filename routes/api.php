@@ -47,6 +47,8 @@ use App\Http\Controllers\RazorpayControllerNew;
 use App\Mail\InsuranceBookingConfirmation;
 use Carbon\Carbon;
 use App\Http\Controllers\VisaInquiryController;
+use App\Http\Controllers\HolidayBookingController;
+
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
@@ -68,6 +70,8 @@ Route::post('v1/genrate-ticket', [FlightController::class, 'generateTicket']);
 Route::post('v1/get-calendar-fare', [FlightController::class, 'getCalendarFare']);
 
 
+
+Route::post('v1/book-holiday', [HolidayBookingController::class, 'bookHoliday']);
 // routes/api.php
 
 
